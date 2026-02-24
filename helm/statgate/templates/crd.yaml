@@ -1,0 +1,116 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: canaryrollouts.statgate.io
+  labels:
+    app.kubernetes.io/name: statgate
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  group: statgate.io
+  names:
+    kind: CanaryRollout
+    listKind: CanaryRolloutList
+    plural: canaryrollouts
+    singular: canaryrollout
+    shortNames:
+      - cr
+      - canary
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Weight
+          type: integer
+          jsonPath: .status.currentWeight
+        - name: Step
+          type: integer
+          jsonPath: .status.currentStep
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: CanaryRollout is the Schema for the canaryrollouts API.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - targetRef
+                - stableServiceRef
+                - canaryServiceRef
+                - virtualServiceRef
+                - steps
+              properties:
+                targetRef:
+                  type: string
+                  description: Name of the canary Deployment in the same namespace.
+                stableServiceRef:
+                  type: string
+                  description: Name of the Service routing to stable pods.
+                canaryServiceRef:
+                  type: string
+                  description: Name of the Service routing to canary pods.
+                virtualServiceRef:
+                  type: string
+                  description: Name of the Istio VirtualService to patch weights on.
+                steps:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - weight
+                      - pauseSeconds
+                    properties:
+                      weight:
+                        type: integer
+                        format: int32
+                        minimum: 0
+                        maximum: 100
+                      pauseSeconds:
+                        type: integer
+                        format: int32
+                        minimum: 0
+                paused:
+                  type: boolean
+                  default: false
+                abort:
+                  type: boolean
+                  default: false
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum:
+                    - Pending
+                    - Running
+                    - Paused
+                    - Promoted
+                    - Aborted
+                    - Failed
+                currentStep:
+                  type: integer
+                  format: int32
+                currentWeight:
+                  type: integer
+                  format: int32
+                lastTransitionTime:
+                  type: string
+                  format: date-time
+                message:
+                  type: string

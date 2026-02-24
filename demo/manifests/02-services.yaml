@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-stable
+  namespace: statgate-demo
+spec:
+  selector:
+    app: demo
+    version: stable
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-canary
+  namespace: statgate-demo
+spec:
+  selector:
+    app: demo
+    version: canary
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP

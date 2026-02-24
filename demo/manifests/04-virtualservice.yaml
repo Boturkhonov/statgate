@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: demo-vs
+  namespace: statgate-demo
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - demo-gateway
+  http:
+    - route:
+        - destination:
+            host: demo-stable
+            port:
+              number: 80
+          weight: 100
+        - destination:
+            host: demo-canary
+            port:
+              number: 80
+          weight: 0

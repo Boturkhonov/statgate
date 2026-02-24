@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-stable
+  namespace: statgate-demo
+  labels:
+    app: demo
+    version: stable
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo
+      version: stable
+  template:
+    metadata:
+      labels:
+        app: demo
+        version: stable
+    spec:
+      containers:
+        - name: demo
+          image: statgate-demo:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "v1"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-canary
+  namespace: statgate-demo
+  labels:
+    app: demo
+    version: canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo
+      version: canary
+  template:
+    metadata:
+      labels:
+        app: demo
+        version: canary
+    spec:
+      containers:
+        - name: demo
+          image: statgate-demo:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "v2"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5

@@ -1,0 +1,21 @@
+apiVersion: statgate.io/v1alpha1
+kind: CanaryRollout
+metadata:
+  name: demo-rollout
+  namespace: statgate-demo
+spec:
+  targetRef: demo-canary
+  stableServiceRef: demo-stable
+  canaryServiceRef: demo-canary
+  virtualServiceRef: demo-vs
+  steps:
+    - weight: 5
+      pauseSeconds: 30
+    - weight: 25
+      pauseSeconds: 30
+    - weight: 50
+      pauseSeconds: 30
+    - weight: 100
+      pauseSeconds: 0
+  paused: false
+  abort: false

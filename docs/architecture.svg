@@ -1,0 +1,275 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentStyleType="text/css"
+     data-diagram-type="DESCRIPTION" height="585px" preserveAspectRatio="none"
+     style="width:1542px;height:585px;background:#FFFFFF;" version="1.1" viewBox="0 0 1542 585" width="1542px"
+     zoomAndPan="magnify">
+    <defs/>
+    <g><!--cluster Kubernetes ???????-->
+        <g class="cluster" data-entity="Kubernetes ......." data-source-line="6" data-uid="ent0003"
+           id="cluster_Kubernetes .......">
+            <rect fill="none" height="572" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1;" width="1267"
+                  x="269.6707" y="7"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="135.5771" x="835.3822" y="24.1074">Kubernetes &#1082;&#1083;&#1072;&#1089;&#1090;&#1077;&#1088;
+            </text>
+        </g><!--cluster Deployments-->
+        <g class="cluster" data-entity="Deployments" data-source-line="10" data-uid="ent0005" id="cluster_Deployments">
+            <rect fill="none" height="167" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1;" width="125"
+                  x="654.1707" y="367"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="87.9102" x="672.7157" y="384.1074">Deployments
+            </text>
+        </g><!--cluster ??????????-->
+        <g class="cluster" data-entity=".........." data-source-line="15" data-uid="ent0008" id="cluster_..........">
+            <rect fill="none" height="115" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1;" width="471"
+                  x="1041.6707" y="367"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="84.1299" x="1235.1058" y="384.1074">&#1052;&#1086;&#1085;&#1080;&#1090;&#1086;&#1088;&#1080;&#1085;&#1075;
+            </text>
+        </g><!--cluster Control Plane-->
+        <g class="cluster" data-entity="Control Plane" data-source-line="24" data-uid="ent0013"
+           id="cluster_Control Plane">
+            <rect fill="none" height="291" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:1;" width="611"
+                  x="636.6707" y="52"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacing"
+                  textLength="91.0068" x="896.6673" y="69.1074">Control Plane
+            </text>
+        </g><!--entity gw-->
+        <g class="entity" data-entity="gw" data-source-line="8" data-uid="ent0004" id="entity_gw">
+            <rect fill="#F1F1F1" height="57.2422" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="145.2549" x="285.6707" y="395.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="79.3516"
+                  x="295.6707" y="420.6074">Traffic router
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="125.2549"
+                  x="295.6707" y="439.2285">(Istio VirtualService)
+            </text>
+        </g><!--entity blue-->
+        <g class="entity" data-entity="blue" data-source-line="11" data-uid="ent0006" id="entity_blue">
+            <rect fill="#F1F1F1" height="38.6211" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="87.6963" x="672.6707" y="478.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="67.6963"
+                  x="682.6707" y="503.6074">Stable (v1)
+            </text>
+        </g><!--entity green-->
+        <g class="entity" data-entity="green" data-source-line="12" data-uid="ent0007" id="entity_green">
+            <rect fill="#F1F1F1" height="38.6211" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="93.1309" x="670.1707" y="404.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="73.1309"
+                  x="680.1707" y="429.6074">Canary (v2)
+            </text>
+        </g><!--entity prom-->
+        <g class="entity" data-entity="prom" data-source-line="16" data-uid="ent0009" id="entity_prom">
+            <path d="M1057.6707,416 C1057.6707,406 1105.412,406 1105.412,406 C1105.412,406 1153.1532,406 1153.1532,416 L1153.1532,443.6211 C1153.1532,453.6211 1105.412,453.6211 1105.412,453.6211 C1105.412,453.6211 1057.6707,453.6211 1057.6707,443.6211 L1057.6707,416"
+                  fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/>
+            <path d="M1057.6707,416 C1057.6707,426 1105.412,426 1105.412,426 C1105.412,426 1153.1532,426 1153.1532,416"
+                  fill="none" style="stroke:#181818;stroke-width:0.5;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="75.4824"
+                  x="1067.6707" y="445.1074">Prometheus
+            </text>
+        </g>
+        <g class="entity" data-entity="GMN10" data-source-line="18" data-uid="ent0011" id="entity_GMN10">
+            <path d="M1294.6707,404 L1294.6707,429.26 L1152.8407,430.81 L1294.6707,437.26 L1294.6707,465.873 A0,0 0 0 0 1294.6707,465.873 L1496.1917,465.873 A0,0 0 0 0 1496.1917,465.873 L1496.1917,414 L1486.1917,404 L1294.6707,404 A0,0 0 0 0 1294.6707,404"
+                  fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+            <path d="M1486.1917,404 L1486.1917,414 L1496.1917,414 L1486.1917,404" fill="#FEFFDD"
+                  style="stroke:#181818;stroke-width:0.5;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="156.5776"
+                  x="1300.6707" y="423.0283">- &#1079;&#1072;&#1076;&#1077;&#1088;&#1078;&#1082;&#1072; (p50, p95, p99)
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="180.521"
+                  x="1300.6707" y="440.3193">- &#1087;&#1088;&#1086;&#1094;&#1077;&#1085;&#1090; &#1091;&#1089;&#1087;&#1077;&#1096;&#1085;&#1099;&#1093;
+                &#1079;&#1072;&#1087;&#1088;&#1086;&#1089;&#1086;&#1074;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="135.2368"
+                  x="1300.6707" y="457.6104">- &#1082;&#1086;&#1083;&#1080;&#1095;&#1077;&#1089;&#1090;&#1074;&#1086;
+                &#1079;&#1072;&#1087;&#1088;&#1086;&#1089;&#1086;&#1074;
+            </text>
+        </g><!--entity gate-->
+        <g class="entity" data-entity="gate" data-source-line="25" data-uid="ent0014" id="entity_gate">
+            <rect fill="#F1F1F1" height="38.6211" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="128.1582" x="652.6707" y="184.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="108.1582"
+                  x="662.6707" y="209.6074">Rollout Controller
+            </text>
+        </g>
+        <g class="entity" data-entity="GMN15" data-source-line="27" data-uid="ent0016" id="entity_GMN15">
+            <path d="M978.6707,190 L978.6707,251.873 L1231.868,251.873 L1231.868,200 L1221.868,190 L978.6707,190"
+                  fill="#FEFFDD" style="stroke:#181818;stroke-width:0.5;"/>
+            <path d="M1221.868,190 L1221.868,200 L1231.868,200 L1221.868,190" fill="#FEFFDD"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="232.1973"
+                  x="984.6707" y="209.0283">- &#1055;&#1086;&#1089;&#1083;&#1077;&#1076;&#1086;&#1074;&#1072;&#1090;&#1077;&#1083;&#1100;&#1085;&#1072;&#1103;
+                &#1087;&#1088;&#1086;&#1074;&#1077;&#1088;&#1082;&#1072; &#1075;&#1080;&#1087;&#1086;&#1090;&#1077;&#1079;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="187.7954"
+                  x="984.6707" y="226.3193">- &#1051;&#1086;&#1075;&#1080;&#1082;&#1072; &#1087;&#1088;&#1086;&#1076;&#1074;&#1080;&#1078;&#1077;&#1085;&#1080;&#1103;
+                &#1090;&#1088;&#1072;&#1092;&#1080;&#1082;&#1072;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="124.1665"
+                  x="984.6707" y="243.6104">- &#1056;&#1077;&#1096;&#1077;&#1085;&#1080;&#1103; &#1086;&#1073; &#1086;&#1090;&#1082;&#1072;&#1090;&#1077;
+            </text>
+        </g><!--entity state-->
+        <g class="entity" data-entity="state" data-source-line="32" data-uid="ent0018" id="entity_state">
+            <path d="M1013.1707,99 C1013.1707,89 1105.4139,89 1105.4139,89 C1105.4139,89 1197.6571,89 1197.6571,99 L1197.6571,145.2422 C1197.6571,155.2422 1105.4139,155.2422 1105.4139,155.2422 C1105.4139,155.2422 1013.1707,155.2422 1013.1707,145.2422 L1013.1707,99"
+                  fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/>
+            <path d="M1013.1707,99 C1013.1707,109 1105.4139,109 1105.4139,109 C1105.4139,109 1197.6571,109 1197.6571,99"
+                  fill="none" style="stroke:#181818;stroke-width:0.5;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="164.4863"
+                  x="1023.1707" y="128.1074">&#1057;&#1086;&#1089;&#1090;&#1086;&#1103;&#1085;&#1080;&#1077; &#1101;&#1082;&#1089;&#1087;&#1077;&#1088;&#1080;&#1084;&#1077;&#1085;&#1090;&#1072;
+            </text>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="91.7793"
+                  x="1023.1707" y="146.7285">(Custom CRD)
+            </text>
+        </g><!--entity k8sapi-->
+        <g class="entity" data-entity="k8sapi" data-source-line="33" data-uid="ent0019" id="entity_k8sapi">
+            <rect fill="#F1F1F1" height="38.6211" rx="2.5" ry="2.5" style="stroke:#181818;stroke-width:0.5;"
+                  width="115.7031" x="1047.1707" y="287.5"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="95.7031"
+                  x="1057.1707" y="312.6074">K8s API Server
+            </text>
+        </g><!--entity users-->
+        <g class="entity" data-entity="users" data-source-line="4" data-uid="ent0002" id="entity_users">
+            <path d="M19.3806,409.418 C22.2032,401.9786 26.7074,400.5116 32.3312,406.7696 C35.7563,399.3808 41.1629,397.6822 47.0116,404.2136 C49.0252,397.6067 54.8706,397.6702 58.9202,401.996 C61.9462,394.744 69.2283,394.1512 74.0976,399.833 C79.2248,394.8127 84.4865,394.2106 87.4092,402.1052 C92.2932,397.0313 96.8672,396.9192 100.4254,403.5763 C106.1742,399.0269 110.3956,399.0238 112.7919,406.91 C117.2307,401.3372 123.9801,401.4841 126.7157,408.7562 C135.8579,411.1681 137.1268,416.913 131.8485,424.1372 C137.9683,432.5505 134.9779,437.7854 125.8202,440.6067 C123.7875,446.6969 118.2686,447.5471 114.1176,442.9197 C109.184,450.0038 103.8262,449.2258 99.7516,442.0542 C97.2354,448.0705 91.1539,449.6366 87.2227,443.5146 C83.2032,450.4941 79.0724,452.4162 73.0384,445.5834 C68.2209,451.3453 63.6451,450.2732 60.3997,443.9405 C55.0682,450.3134 49.8523,449.7049 45.7432,442.6102 C41.3657,448.6472 36.1868,447.5074 32.5834,441.7467 C28.3972,447.3885 24.2558,448.3561 19.6296,442.2311 C9.0742,441.8828 6,433.1492 10.6939,424.9265 C7.0381,416.2292 10.0695,410.8523 19.3806,409.418"
+                  fill="#F1F1F1" style="stroke:#181818;stroke-width:0.5;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacing" textLength="92.9277"
+                  x="25.6707" y="429.6074">&#1055;&#1086;&#1083;&#1100;&#1079;&#1086;&#1074;&#1072;&#1090;&#1077;&#1083;&#1080;
+            </text>
+        </g><!--link gate to GMN15-->
+        <g class="link" data-entity-1="gate" data-entity-2="GMN15" data-source-line="27" data-uid="lnk17"
+           id="link_gate_GMN15">
+            <path d="M745.4707,184.33 C763.2107,173.02 787.2007,159.91 810.6707,154 C840.4107,146.51 919.1207,145.81 948.6707,154 C963.6607,158.15 964.7107,165.15 978.6707,172 C991.4807,178.29 1005.3107,184.36 1018.9507,189.96"
+                  fill="none" id="gate-GMN15" style="stroke:#181818;stroke-width:1;stroke-dasharray:7,7;"/>
+        </g><!--link users to gw-->
+        <g class="link" data-entity-1="users" data-entity-2="gw" data-source-line="38" data-uid="lnk20"
+           id="link_users_gw">
+            <path d="M133.7507,424 C178.2207,424 232.7907,424 279.6407,424" fill="none" id="users-to-gw"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818" points="285.6407,424,276.6407,420,280.6407,424,276.6407,428,285.6407,424"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="88.0864"
+                  x="164.6707" y="420.0283">HTTP &#1079;&#1072;&#1087;&#1088;&#1086;&#1089;&#1099;
+            </text>
+        </g><!--link gw to blue-->
+        <g class="link" data-entity-1="gw" data-entity-2="blue" data-source-line="39" data-uid="lnk21"
+           id="link_gw_blue">
+            <path d="M430.8107,443.8 C440.8107,446.35 450.9707,448.82 460.6707,451 C534.6807,467.64 615.8105,481.7547 666.6805,490.1347"
+                  fill="none" id="gw-to-blue" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="672.6007,491.11,664.3706,485.7003,667.6672,490.2973,663.0703,493.5939,672.6007,491.11"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80.9199"
+                  x="500.6707" y="447.0283">75% &#1090;&#1088;&#1072;&#1092;&#1080;&#1082;&#1072;
+            </text>
+        </g><!--link gw to green-->
+        <g class="link" data-entity-1="gw" data-entity-2="green" data-source-line="40" data-uid="lnk22"
+           id="link_gw_green">
+            <path d="M430.8807,424 C502.2507,424 603.6107,424 664.0707,424" fill="none" id="gw-to-green"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818" points="670.0707,424,661.0707,420,665.0707,424,661.0707,428,670.0707,424"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="80.9199"
+                  x="500.6707" y="420.0283">25% &#1090;&#1088;&#1072;&#1092;&#1080;&#1082;&#1072;
+            </text>
+        </g><!--link blue to prom-->
+        <g class="link" data-entity-1="blue" data-entity-2="prom" data-source-line="42" data-uid="lnk23"
+           id="link_blue_prom">
+            <path d="M760.8407,516.76 C776.2607,522.54 793.9607,528.12 810.6707,531 C871.1107,541.41 889.8607,548.42 948.6707,531 C999.1307,516.05 1044.0045,482.8922 1073.1345,458.0622"
+                  fill="none" id="blue-to-prom" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1077.7007,454.17,1068.2566,456.9641,1073.8955,457.4135,1073.4462,463.0525,1077.7007,454.17"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49.5625"
+                  x="855.1707" y="527.0283">&#1084;&#1077;&#1090;&#1088;&#1080;&#1082;&#1080;
+            </text>
+        </g><!--link green to prom-->
+        <g class="link" data-entity-1="green" data-entity-2="prom" data-source-line="43" data-uid="lnk24"
+           id="link_green_prom">
+            <path d="M763.5207,424.71 C837.6107,425.86 976.8515,428.0267 1051.4715,429.1867" fill="none"
+                  id="green-to-prom" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1057.4707,429.28,1048.534,425.1406,1052.4713,429.2023,1048.4097,433.1396,1057.4707,429.28"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="49.5625"
+                  x="855.1707" y="422.0283">&#1084;&#1077;&#1090;&#1088;&#1080;&#1082;&#1080;
+            </text>
+        </g><!--link blue to k8sapi-->
+        <g class="link" data-entity-1="blue" data-entity-2="k8sapi" data-source-line="45" data-uid="lnk25"
+           id="link_blue_k8sapi">
+            <path d="M760.8107,501.25 C811.1807,502.72 894.5007,497.64 948.6707,455 C974.3107,434.82 957.4207,412.76 978.6707,388 C1001.3907,361.53 1029.5674,343.3072 1056.2374,329.3172"
+                  fill="none" id="blue-to-k8sapi" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1061.5507,326.53,1051.7226,327.1685,1057.123,328.8526,1055.4388,334.253,1061.5507,326.53"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="78.2412"
+                  x="840.6707" y="451.0283">&#1089;&#1090;&#1072;&#1090;&#1091;&#1089; &#1087;&#1086;&#1076;&#1086;&#1074;
+            </text>
+        </g><!--link green to k8sapi-->
+        <g class="link" data-entity-1="green" data-entity-2="k8sapi" data-source-line="46" data-uid="lnk26"
+           id="link_green_k8sapi">
+            <path d="M763.5207,410.12 C834.3107,388.69 964.3181,349.3383 1041.3581,326.0183" fill="none"
+                  id="green-to-k8sapi" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1047.1007,324.28,1037.3279,323.059,1042.3152,325.7286,1039.6456,330.7159,1047.1007,324.28"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="78.2412"
+                  x="840.6707" y="352.0283">&#1089;&#1090;&#1072;&#1090;&#1091;&#1089; &#1087;&#1086;&#1076;&#1086;&#1074;
+            </text>
+        </g><!--link prom to gate-->
+        <g class="link" data-entity-1="prom" data-entity-2="gate" data-source-line="48" data-uid="lnk27"
+           id="link_prom_gate">
+            <path d="M1073.1207,405.9 C1042.8907,383.52 994.8707,350.76 948.6707,331 C890.5907,306.15 865.6907,328.03 810.6707,297 C777.8507,278.49 752.393,249.9472 735.813,228.6172"
+                  fill="none" id="prom-to-gate" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="732.1307,223.88,734.496,233.4406,735.1993,227.8277,740.8123,228.5309,732.1307,223.88"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="87.1025"
+                  x="836.1707" y="293.0283">&#1079;&#1072;&#1087;&#1088;&#1086;&#1089; &#1084;&#1077;&#1090;&#1088;&#1080;&#1082;
+            </text>
+        </g><!--link k8sapi to gate-->
+        <g class="link" data-entity-1="k8sapi" data-entity-2="gate" data-source-line="49" data-uid="lnk28"
+           id="link_k8sapi_gate">
+            <path d="M1046.9107,293.82 C974.6507,277.08 854.5107,248.81 810.6707,236 C798.0507,232.31 790.2906,229.8838 777.6606,225.5838"
+                  fill="none" id="k8sapi-to-gate" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="771.9807,223.65,779.2113,230.3372,776.7139,225.2615,781.7897,222.7641,771.9807,223.65"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="135.1733"
+                  x="812.1707" y="232.0283">&#1089;&#1090;&#1072;&#1090;&#1091;&#1089; &#1088;&#1072;&#1079;&#1074;&#1077;&#1088;&#1090;&#1099;&#1074;&#1072;&#1085;&#1080;&#1081;
+            </text>
+        </g><!--link gate to k8sapi-->
+        <g class="link" data-entity-1="gate" data-entity-2="k8sapi" data-source-line="53" data-uid="lnk31"
+           id="link_gate_k8sapi">
+            <path d="M780.6907,190.45 C830.1407,183.38 898.7407,181.77 948.6707,213 C972.6107,227.97 956.8307,251.1 978.6707,269 C997.9507,284.8 1017.857,292.6794 1041.007,298.0694"
+                  fill="none" id="gate-to-k8sapi" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1046.8507,299.43,1038.9923,293.4933,1041.981,298.2962,1037.1781,301.2849,1046.8507,299.43"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="93.9771"
+                  x="833.1707" y="183.0283">&#1082;&#1086;&#1084;&#1072;&#1085;&#1076;&#1072; &#1086;&#1090;&#1082;&#1072;&#1090;&#1072;
+            </text>
+        </g><!--link gate to state-->
+        <g class="link" data-entity-1="gate" data-entity-2="state" data-source-line="50" data-uid="lnk29"
+           id="link_gate_state">
+            <path d="M742.5207,184.31 C760.3907,171.31 785.6607,155.22 810.6707,147 C876.1407,125.49 948.0011,119.767 1007.0811,119.107"
+                  fill="none" id="gate-to-state" style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="1013.0807,119.04,1004.0366,115.1408,1008.0811,119.0959,1004.126,123.1403,1013.0807,119.04"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="136.3159"
+                  x="811.6707" y="119.0283">&#1089;&#1086;&#1093;&#1088;&#1072;&#1085;&#1077;&#1085;&#1080;&#1077;
+                &#1089;&#1086;&#1089;&#1090;&#1086;&#1103;&#1085;&#1080;&#1103;
+            </text>
+        </g><!--link gate to gw-->
+        <g class="link" data-entity-1="gate" data-entity-2="gw" data-source-line="52" data-uid="lnk30"
+           id="link_gate_gw">
+            <path d="M683.7307,223.71 C620.4407,262.77 483.9969,346.9693 410.5169,392.3093" fill="none" id="gate-to-gw"
+                  style="stroke:#181818;stroke-width:1;"/>
+            <polygon fill="#181818"
+                     points="405.4107,395.46,415.1705,394.1381,409.6659,392.8344,410.9695,387.3298,405.4107,395.46"
+                     style="stroke:#181818;stroke-width:1;"/>
+            <text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacing" textLength="158.7549"
+                  x="461.6707" y="260.0283">&#1080;&#1079;&#1084;&#1077;&#1085;&#1077;&#1085;&#1080;&#1077; &#1074;&#1077;&#1089;&#1086;&#1074;
+                &#1090;&#1088;&#1072;&#1092;&#1080;&#1082;&#1072;
+            </text>
+        </g><!--SRC=[XLFTIXj16BtVf_W851Ggj89KUr4eyQBYJL3fLM_6PAABcvrbTjOYfM1iRGjQyW0jsBx1LcDDeuclCFD6_RvlDjaafXH2ijavv_ivvqmacmQC0XtkxHjeX5hMJQZY83q8uqHeqOAwQYKgbh7PDaUH10A8U2-IGL2FLDQ0YhsmGtlhpkqD_bxQt9tOQtjhUnKGAMIfr6aGZ5bGsSnsfOwbaIdOFk9oroQ6Ewx0ko20iXzKThHeDiCwQ9KPgT_42nif3WUlGsqo4MrBVHZMvIBtsNjBt8aswpA9r54BwwHK662gyhOHkuXQE7pgwRjH9cSnLH4BVOIOvQA5bZ96qFkPJlOxxZsmFTnYw8vj3v-lHYqR0Xk9554rhLhIxCiivM89_cL4h8mir5VDyZN04g2WkUsIDFOtIfN3GhBov34aQolqjRPO0kyHCdIVKFU1Em7tmRNjFVA-uDypT-eBUKoRF2g9VR8EH_-CQBBXqWxdesNSu57dx5zLiT4gWbeaOZb7woqLOL0C5BX8QY-dC7AE0kFNFDy53t6BYtKdmuLX6-1pfzWS3qWaaiXUeG7to2BSJLde6wBeY36Ur4LQ3vMzPlCwu4xmTUu-UbH9_S5AZb18_0LSl- -dcPPdndNxanRWP7IeWBq6zzNs2tyeB7VUD9jZlAjPQbGBgblhFd6f6Oan8UVcQWelQnj0yI-aF5XDHH9wQ_33TmwMbbxWhO3dy6fdfpPbgZiBy83EAVQ8UBRoQ7Rx0i2PHyJoGqJ0P09HQ153gp26pdk1f_xxlEJxyH71Ig6e560W5xth4wN-2msu6O-Esb7NYSMdHWYAMXFOgQAqB98vMlZgZDB75lu964uyDeY9MFwK6GEV53AwFUszwmGbavr1s8qFm9Z4_VZQFN1aH1rhmBVtZdjsATPbAFE_]-->
+    </g>
+</svg>
