@@ -8,13 +8,30 @@ spec:
   stableServiceRef: demo-stable
   canaryServiceRef: demo-canary
   virtualServiceRef: demo-vs
+  prometheusURL: "http://prometheus-server.monitoring.svc.cluster.local:9090"
+  metrics:
+    - name: canary-error-rate
+      query: >-
+        (sum(rate(http_requests_total{status_code=~"5..",version="canary"}[1m])) or vector(0))
+        /
+        sum(rate(http_requests_total{version="canary"}[1m]))
+      threshold: 0.05
+      operator: "<"
+      interval: "1m"
+    - name: canary-p99-latency
+      query: >-
+        histogram_quantile(0.99,
+          sum(rate(http_request_duration_seconds_bucket{version="canary"}[1m])) by (le))
+      threshold: 1.0
+      operator: "<"
+      interval: "1m"
   steps:
     - weight: 5
-      pauseSeconds: 30
+      pauseSeconds: 60
     - weight: 25
-      pauseSeconds: 30
+      pauseSeconds: 60
     - weight: 50
-      pauseSeconds: 30
+      pauseSeconds: 60
     - weight: 100
       pauseSeconds: 0
   paused: false

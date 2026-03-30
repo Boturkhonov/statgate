@@ -91,6 +91,37 @@ spec:
                 abort:
                   type: boolean
                   default: false
+                prometheusURL:
+                  type: string
+                  description: Base URL of the Prometheus instance to query for metric checks. If empty, all Metrics checks are skipped.
+                metrics:
+                  type: array
+                  description: Optional list of Prometheus health gates evaluated after each step pause before advancing.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - query
+                      - threshold
+                      - operator
+                    properties:
+                      name:
+                        type: string
+                        description: Human-readable label for this check.
+                      query:
+                        type: string
+                        description: PromQL instant query evaluated against prometheusURL.
+                      threshold:
+                        type: number
+                        format: double
+                        description: Numeric value to compare the query result against.
+                      operator:
+                        type: string
+                        description: "Comparison operator. Allowed values: >, <, >=, <=, ==, !="
+                        pattern: '^(>|<|>=|<=|==|!=)$'
+                      interval:
+                        type: string
+                        description: Informational interval hint (e.g. 1m). Embed directly in the query string.
             status:
               type: object
               properties:

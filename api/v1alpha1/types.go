@@ -12,6 +12,26 @@ type CanaryStep struct {
 	PauseSeconds int32 `json:"pauseSeconds"`
 }
 
+// MetricCheck defines a single Prometheus-based health gate evaluated before
+// advancing past a rollout step.
+type MetricCheck struct {
+	// Name is a human-readable label for this check (used in status messages).
+	Name string `json:"name"`
+	// Query is a PromQL instant query evaluated against PrometheusURL.
+	Query string `json:"query"`
+	// Threshold is the numeric value to compare the query result against.
+	Threshold float64 `json:"threshold"`
+	// Operator is the comparison operator used to evaluate the check.
+	// The check passes when: queryResult <Operator> Threshold.
+	// Allowed values: >, <, >=, <=, ==, !=
+	// +kubebuilder:validation:Pattern=`^(>|<|>=|<=|==|!=)$`
+	Operator string `json:"operator"`
+	// Interval is informational — embed it directly in the Query string
+	// (e.g. rate(metric[1m])). Stored here for documentation purposes only.
+	// +optional
+	Interval string `json:"interval,omitempty"`
+}
+
 // CanaryRolloutSpec defines the desired state of a CanaryRollout.
 type CanaryRolloutSpec struct {
 	// TargetRef is the name of the canary Deployment (same namespace).
@@ -31,6 +51,14 @@ type CanaryRolloutSpec struct {
 	// Abort triggers an immediate rollback to 100% stable traffic.
 	// +optional
 	Abort bool `json:"abort,omitempty"`
+	// PrometheusURL is the base URL of the Prometheus instance to query for
+	// metric checks. If empty, all Metrics checks are skipped.
+	// +optional
+	PrometheusURL string `json:"prometheusURL,omitempty"`
+	// Metrics is an optional list of Prometheus health gates evaluated after
+	// each step's pause period before advancing. Any failure triggers auto-abort.
+	// +optional
+	Metrics []MetricCheck `json:"metrics,omitempty"`
 }
 
 // RolloutPhase describes the current phase of the rollout.

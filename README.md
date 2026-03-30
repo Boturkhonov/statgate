@@ -107,6 +107,16 @@ spec:
   stableServiceRef: my-stable-svc      # Service для стабильных подов
   canaryServiceRef: my-canary-svc      # Service для канареечных подов
   virtualServiceRef: my-virtualservice  # Istio VirtualService для патчинга весов
+  prometheusURL: "http://prometheus-server.monitoring.svc.cluster.local:9090"
+  metrics:
+    - name: canary-error-rate
+      query: >-
+        (sum(rate(http_requests_total{status_code=~"5..",version="canary"}[1m])) or vector(0))
+        /
+        sum(rate(http_requests_total{version="canary"}[1m]))
+      threshold: 0.05
+      operator: "<"
+      interval: "1m"
   steps:
     - weight: 5                         # 5% трафика на канареечную версию
       pauseSeconds: 60                  # Ожидание 60с перед следующим шагом

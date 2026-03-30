@@ -1,11 +1,31 @@
 package v1alpha1
 
 // DeepCopyInto copies the receiver into out. in must be non-nil.
+func (in *MetricCheck) DeepCopyInto(out *MetricCheck) {
+	*out = *in
+}
+
+// DeepCopy creates a new MetricCheck.
+func (in *MetricCheck) DeepCopy() *MetricCheck {
+	if in == nil {
+		return nil
+	}
+	out := new(MetricCheck)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto copies the receiver into out. in must be non-nil.
 func (in *CanaryRolloutSpec) DeepCopyInto(out *CanaryRolloutSpec) {
 	*out = *in
 	if in.Steps != nil {
 		in, out := &in.Steps, &out.Steps
 		*out = make([]CanaryStep, len(*in))
+		copy(*out, *in)
+	}
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = make([]MetricCheck, len(*in))
 		copy(*out, *in)
 	}
 }

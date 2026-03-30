@@ -138,6 +138,28 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: pauseDuration}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseRunning, int32(currentStep), canaryWeight, msg)
 	}
 
+	// --- Metric analysis (before advancing to next step) ---
+	if rollout.Spec.PrometheusURL != "" && len(rollout.Spec.Metrics) > 0 {
+		passed, failReason, err := AnalyzeCanaryMetrics(ctx, rollout.Spec.PrometheusURL, rollout.Spec.Metrics)
+		if err != nil {
+			// Transient error (Prometheus unreachable, etc.) — retry, do NOT abort.
+			logger.Error(err, "metric analysis error, will retry")
+			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+		}
+		if !passed {
+			logger.Info("metric check failed, aborting rollout", "reason", failReason)
+			_ = SetVirtualServiceWeights(
+				ctx, r.Client, rollout.Namespace, rollout.Spec.VirtualServiceRef,
+				rollout.Spec.StableServiceRef, 100,
+				rollout.Spec.CanaryServiceRef, 0,
+			)
+			abortMsg := fmt.Sprintf("Metric check failed at step %d: %s", currentStep, failReason)
+			return ctrl.Result{}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseAborted,
+				int32(currentStep), 0, abortMsg)
+		}
+		logger.Info("metric analysis passed, advancing step")
+	}
+
 	// --- Advance to next step ---
 	nextStep := int32(currentStep + 1)
 	if int(nextStep) >= len(steps) {
