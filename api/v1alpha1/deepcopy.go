@@ -1,16 +1,51 @@
 package v1alpha1
 
 // DeepCopyInto copies the receiver into out. in must be non-nil.
-func (in *MetricCheck) DeepCopyInto(out *MetricCheck) {
+func (in *SPRTMetric) DeepCopyInto(out *SPRTMetric) {
 	*out = *in
 }
 
-// DeepCopy creates a new MetricCheck.
-func (in *MetricCheck) DeepCopy() *MetricCheck {
+// DeepCopy creates a new SPRTMetric.
+func (in *SPRTMetric) DeepCopy() *SPRTMetric {
 	if in == nil {
 		return nil
 	}
-	out := new(MetricCheck)
+	out := new(SPRTMetric)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto copies the receiver into out. in must be non-nil.
+func (in *SPRTAnalysis) DeepCopyInto(out *SPRTAnalysis) {
+	*out = *in
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = make([]SPRTMetric, len(*in))
+		copy(*out, *in)
+	}
+}
+
+// DeepCopy creates a new SPRTAnalysis.
+func (in *SPRTAnalysis) DeepCopy() *SPRTAnalysis {
+	if in == nil {
+		return nil
+	}
+	out := new(SPRTAnalysis)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto copies the receiver into out. in must be non-nil.
+func (in *SPRTMetricState) DeepCopyInto(out *SPRTMetricState) {
+	*out = *in
+}
+
+// DeepCopy creates a new SPRTMetricState.
+func (in *SPRTMetricState) DeepCopy() *SPRTMetricState {
+	if in == nil {
+		return nil
+	}
+	out := new(SPRTMetricState)
 	in.DeepCopyInto(out)
 	return out
 }
@@ -23,10 +58,10 @@ func (in *CanaryRolloutSpec) DeepCopyInto(out *CanaryRolloutSpec) {
 		*out = make([]CanaryStep, len(*in))
 		copy(*out, *in)
 	}
-	if in.Metrics != nil {
-		in, out := &in.Metrics, &out.Metrics
-		*out = make([]MetricCheck, len(*in))
-		copy(*out, *in)
+	if in.Analysis != nil {
+		in, out := &in.Analysis, &out.Analysis
+		*out = new(SPRTAnalysis)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -44,6 +79,11 @@ func (in *CanaryRolloutSpec) DeepCopy() *CanaryRolloutSpec {
 func (in *CanaryRolloutStatus) DeepCopyInto(out *CanaryRolloutStatus) {
 	*out = *in
 	in.LastTransitionTime.DeepCopyInto(&out.LastTransitionTime)
+	if in.AnalysisState != nil {
+		in, out := &in.AnalysisState, &out.AnalysisState
+		*out = make([]SPRTMetricState, len(*in))
+		copy(*out, *in)
+	}
 }
 
 // DeepCopy creates a new CanaryRolloutStatus.

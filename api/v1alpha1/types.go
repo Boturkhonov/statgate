@@ -12,24 +12,70 @@ type CanaryStep struct {
 	PauseSeconds int32 `json:"pauseSeconds"`
 }
 
-// MetricCheck defines a single Prometheus-based health gate evaluated before
-// advancing past a rollout step.
-type MetricCheck struct {
-	// Name is a human-readable label for this check (used in status messages).
+// SPRTMetric defines a single SPRT health gate using the Bernoulli model.
+// Four PromQL queries supply the raw counters needed to compute the
+// log-likelihood ratio.
+type SPRTMetric struct {
+	// Name is a human-readable label for this metric (used in status messages).
 	Name string `json:"name"`
-	// Query is a PromQL instant query evaluated against PrometheusURL.
-	Query string `json:"query"`
-	// Threshold is the numeric value to compare the query result against.
-	Threshold float64 `json:"threshold"`
-	// Operator is the comparison operator used to evaluate the check.
-	// The check passes when: queryResult <Operator> Threshold.
-	// Allowed values: >, <, >=, <=, ==, !=
-	// +kubebuilder:validation:Pattern=`^(>|<|>=|<=|==|!=)$`
-	Operator string `json:"operator"`
-	// Interval is informational — embed it directly in the Query string
-	// (e.g. rate(metric[1m])). Stored here for documentation purposes only.
+	// CanaryTotalQuery is a PromQL query returning the cumulative total
+	// request counter for the canary version (must be monotonically increasing).
+	CanaryTotalQuery string `json:"canaryTotalQuery"`
+	// CanaryFailureQuery is a PromQL query returning the cumulative failure
+	// counter for the canary version (must be monotonically increasing).
+	CanaryFailureQuery string `json:"canaryFailureQuery"`
+	// StableTotalQuery is a PromQL query returning the cumulative total
+	// request counter for the stable version.
+	StableTotalQuery string `json:"stableTotalQuery"`
+	// StableFailureQuery is a PromQL query returning the cumulative failure
+	// counter for the stable version.
+	StableFailureQuery string `json:"stableFailureQuery"`
+	// Delta is the minimum detectable effect size (percentage points).
+	// The alternative hypothesis is p1 = p0 + delta.
+	// Example: 0.05 detects a 5-percentage-point increase in error rate.
+	Delta float64 `json:"delta"`
+}
+
+// SPRTAnalysis configures Sequential Probability Ratio Test analysis
+// for canary health evaluation.
+type SPRTAnalysis struct {
+	// Alpha is the maximum probability of a false rollback (Type I error).
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	Alpha float64 `json:"alpha"`
+	// Beta is the maximum probability of missing a real degradation (Type II error).
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	Beta float64 `json:"beta"`
+	// AnalysisIntervalSeconds controls how frequently the SPRT runs during
+	// the pause window. Defaults to 10.
 	// +optional
-	Interval string `json:"interval,omitempty"`
+	AnalysisIntervalSeconds int32 `json:"analysisIntervalSeconds,omitempty"`
+	// Metrics is the list of SPRT health gates.
+	// +kubebuilder:validation:MinItems=1
+	Metrics []SPRTMetric `json:"metrics"`
+}
+
+// SPRTMetricState stores the accumulated SPRT state for a single metric
+// across reconcile cycles. Persisted in CanaryRolloutStatus so that the
+// test survives controller restarts.
+type SPRTMetricState struct {
+	// Name matches the SPRTMetric.Name this state corresponds to.
+	Name string `json:"name"`
+	// LogLikelihood is the accumulated log-likelihood ratio (Λ).
+	LogLikelihood float64 `json:"logLikelihood"`
+	// Observations is the total number of canary requests observed so far.
+	Observations int64 `json:"observations"`
+	// Failures is the total number of canary failures observed so far.
+	Failures int64 `json:"failures"`
+	// BaselineRate is the most recently computed p0 from stable data.
+	BaselineRate float64 `json:"baselineRate"`
+	// LastCanaryTotal is the last-seen value of the canary total counter.
+	LastCanaryTotal float64 `json:"lastCanaryTotal"`
+	// LastCanaryFailure is the last-seen value of the canary failure counter.
+	LastCanaryFailure float64 `json:"lastCanaryFailure"`
+	// Decision is the current per-metric verdict: "pending", "promote", or "rollback".
+	Decision string `json:"decision"`
 }
 
 // CanaryRolloutSpec defines the desired state of a CanaryRollout.
@@ -51,14 +97,14 @@ type CanaryRolloutSpec struct {
 	// Abort triggers an immediate rollback to 100% stable traffic.
 	// +optional
 	Abort bool `json:"abort,omitempty"`
-	// PrometheusURL is the base URL of the Prometheus instance to query for
-	// metric checks. If empty, all Metrics checks are skipped.
+	// PrometheusURL is the base URL of the Prometheus instance to query.
+	// If empty, SPRT analysis is skipped.
 	// +optional
 	PrometheusURL string `json:"prometheusURL,omitempty"`
-	// Metrics is an optional list of Prometheus health gates evaluated after
-	// each step's pause period before advancing. Any failure triggers auto-abort.
+	// Analysis configures SPRT-based statistical analysis of canary metrics.
+	// If nil, no metric analysis is performed.
 	// +optional
-	Metrics []MetricCheck `json:"metrics,omitempty"`
+	Analysis *SPRTAnalysis `json:"analysis,omitempty"`
 }
 
 // RolloutPhase describes the current phase of the rollout.
@@ -91,6 +137,10 @@ type CanaryRolloutStatus struct {
 	// Message is a human-readable description of the current state.
 	// +optional
 	Message string `json:"message,omitempty"`
+	// AnalysisState holds the per-metric SPRT accumulator state.
+	// Reset to nil when advancing to the next step.
+	// +optional
+	AnalysisState []SPRTMetricState `json:"analysisState,omitempty"`
 }
 
 // +kubebuilder:object:root=true

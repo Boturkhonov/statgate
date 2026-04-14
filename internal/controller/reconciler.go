@@ -109,16 +109,10 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
-	// --- Timer check ---
+	// --- Current step ---
 	step := steps[currentStep]
 	pauseDuration := time.Duration(step.PauseSeconds) * time.Second
 	elapsed := time.Since(rollout.Status.LastTransitionTime.Time)
-
-	if rollout.Status.CurrentWeight == step.Weight && elapsed < pauseDuration {
-		remaining := pauseDuration - elapsed
-		logger.Info("waiting at current step", "step", currentStep, "remaining", remaining.Round(time.Second))
-		return ctrl.Result{RequeueAfter: remaining}, nil
-	}
 
 	// --- Apply current step weight ---
 	if rollout.Status.CurrentWeight != step.Weight {
@@ -138,29 +132,63 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: pauseDuration}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseRunning, int32(currentStep), canaryWeight, msg)
 	}
 
-	// --- Metric analysis (before advancing to next step) ---
-	if rollout.Spec.PrometheusURL != "" && len(rollout.Spec.Metrics) > 0 {
-		passed, failReason, err := AnalyzeCanaryMetrics(ctx, rollout.Spec.PrometheusURL, rollout.Spec.Metrics)
+	// --- SPRT analysis (runs on EVERY reconcile during pause) ---
+	if rollout.Spec.PrometheusURL != "" && rollout.Spec.Analysis != nil {
+		decision, newState, reason, err := RunSPRT(
+			ctx, rollout.Spec.PrometheusURL,
+			rollout.Spec.Analysis,
+			rollout.Status.AnalysisState,
+		)
+
+		// Always persist updated SPRT state.
+		rollout.Status.AnalysisState = newState
+
 		if err != nil {
 			// Transient error (Prometheus unreachable, etc.) — retry, do NOT abort.
-			logger.Error(err, "metric analysis error, will retry")
+			logger.Error(err, "SPRT analysis error, will retry")
 			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 		}
-		if !passed {
-			logger.Info("metric check failed, aborting rollout", "reason", failReason)
+
+		if decision == SPRTRollback {
+			logger.Info("SPRT: rollback decision reached", "reason", reason)
 			_ = SetVirtualServiceWeights(
 				ctx, r.Client, rollout.Namespace, rollout.Spec.VirtualServiceRef,
 				rollout.Spec.StableServiceRef, 100,
 				rollout.Spec.CanaryServiceRef, 0,
 			)
-			abortMsg := fmt.Sprintf("Metric check failed at step %d: %s", currentStep, failReason)
+			msg := fmt.Sprintf("SPRT rollback at step %d: %s", currentStep, reason)
 			return ctrl.Result{}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseAborted,
-				int32(currentStep), 0, abortMsg)
+				int32(currentStep), 0, msg)
 		}
-		logger.Info("metric analysis passed, advancing step")
+
+		// Persist SPRT state without resetting LastTransitionTime.
+		// We call r.Status().Update() directly instead of setStatus()
+		// to avoid resetting the pause timer on every analysis cycle.
+		rollout.Status.Message = reason
+		if err := r.Status().Update(ctx, &rollout); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// --- Timer check (pause must still elapse before advancing) ---
+	if elapsed < pauseDuration {
+		analysisInterval := 10 * time.Second
+		if rollout.Spec.Analysis != nil && rollout.Spec.Analysis.AnalysisIntervalSeconds > 0 {
+			analysisInterval = time.Duration(rollout.Spec.Analysis.AnalysisIntervalSeconds) * time.Second
+		}
+		remaining := pauseDuration - elapsed
+		requeue := analysisInterval
+		if remaining < requeue {
+			requeue = remaining
+		}
+		logger.Info("waiting at current step", "step", currentStep, "remaining", remaining.Round(time.Second))
+		return ctrl.Result{RequeueAfter: requeue}, nil
 	}
 
 	// --- Advance to next step ---
+	// Reset SPRT state for the next step.
+	rollout.Status.AnalysisState = nil
+
 	nextStep := int32(currentStep + 1)
 	if int(nextStep) >= len(steps) {
 		logger.Info("all steps completed, promoting")

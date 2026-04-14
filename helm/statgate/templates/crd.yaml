@@ -93,35 +93,65 @@ spec:
                   default: false
                 prometheusURL:
                   type: string
-                  description: Base URL of the Prometheus instance to query for metric checks. If empty, all Metrics checks are skipped.
-                metrics:
-                  type: array
-                  description: Optional list of Prometheus health gates evaluated after each step pause before advancing.
-                  items:
-                    type: object
-                    required:
-                      - name
-                      - query
-                      - threshold
-                      - operator
-                    properties:
-                      name:
-                        type: string
-                        description: Human-readable label for this check.
-                      query:
-                        type: string
-                        description: PromQL instant query evaluated against prometheusURL.
-                      threshold:
-                        type: number
-                        format: double
-                        description: Numeric value to compare the query result against.
-                      operator:
-                        type: string
-                        description: "Comparison operator. Allowed values: >, <, >=, <=, ==, !="
-                        pattern: '^(>|<|>=|<=|==|!=)$'
-                      interval:
-                        type: string
-                        description: Informational interval hint (e.g. 1m). Embed directly in the query string.
+                  description: Base URL of the Prometheus instance to query. If empty, SPRT analysis is skipped.
+                analysis:
+                  type: object
+                  description: SPRT-based statistical analysis configuration.
+                  required:
+                    - alpha
+                    - beta
+                    - metrics
+                  properties:
+                    alpha:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 1
+                      description: Maximum probability of a false rollback (Type I error).
+                    beta:
+                      type: number
+                      format: double
+                      minimum: 0
+                      maximum: 1
+                      description: Maximum probability of missing a real degradation (Type II error).
+                    analysisIntervalSeconds:
+                      type: integer
+                      format: int32
+                      minimum: 1
+                      description: How frequently the SPRT runs during the pause window. Defaults to 10.
+                    metrics:
+                      type: array
+                      minItems: 1
+                      description: List of SPRT health gates using the Bernoulli model.
+                      items:
+                        type: object
+                        required:
+                          - name
+                          - canaryTotalQuery
+                          - canaryFailureQuery
+                          - stableTotalQuery
+                          - stableFailureQuery
+                          - delta
+                        properties:
+                          name:
+                            type: string
+                            description: Human-readable label for this metric.
+                          canaryTotalQuery:
+                            type: string
+                            description: PromQL query returning cumulative total request counter for canary.
+                          canaryFailureQuery:
+                            type: string
+                            description: PromQL query returning cumulative failure counter for canary.
+                          stableTotalQuery:
+                            type: string
+                            description: PromQL query returning cumulative total request counter for stable.
+                          stableFailureQuery:
+                            type: string
+                            description: PromQL query returning cumulative failure counter for stable.
+                          delta:
+                            type: number
+                            format: double
+                            description: Minimum detectable effect size. Alternative hypothesis is p1 = p0 + delta.
             status:
               type: object
               properties:
@@ -145,3 +175,35 @@ spec:
                   format: date-time
                 message:
                   type: string
+                analysisState:
+                  type: array
+                  description: Per-metric SPRT accumulator state. Reset when advancing to next step.
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      logLikelihood:
+                        type: number
+                        format: double
+                      observations:
+                        type: integer
+                        format: int64
+                      failures:
+                        type: integer
+                        format: int64
+                      baselineRate:
+                        type: number
+                        format: double
+                      lastCanaryTotal:
+                        type: number
+                        format: double
+                      lastCanaryFailure:
+                        type: number
+                        format: double
+                      decision:
+                        type: string
+                        enum:
+                          - pending
+                          - promote
+                          - rollback
