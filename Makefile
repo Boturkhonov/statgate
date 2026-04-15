@@ -34,6 +34,10 @@ test: generate fmt vet ## Run tests
 build: generate fmt vet ## Build controller binary
 	go build -o bin/statgate-controller ./cmd/
 
+.PHONY: build-cli
+build-cli: ## Build statgatectl client binary
+	go build -o bin/statgatectl ./cmd/statgatectl/
+
 .PHONY: run
 run: generate fmt vet ## Run controller from host (for development)
 	go run ./cmd/
