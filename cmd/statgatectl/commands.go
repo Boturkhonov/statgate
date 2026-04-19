@@ -130,8 +130,6 @@ func cmdApply(ctx context.Context, args []string) error {
 	getErr := c.Get(ctx, key, existing)
 	switch {
 	case apierrors.IsNotFound(getErr):
-		// Clear TypeMeta so controller-runtime uses the scheme-registered GVK.
-		cr.TypeMeta = cr.TypeMeta
 		if err := c.Create(ctx, cr); err != nil {
 			return fmt.Errorf("create: %w", err)
 		}

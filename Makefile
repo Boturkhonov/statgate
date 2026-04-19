@@ -1,6 +1,6 @@
 IMG ?= statgate-controller:latest
 DEMO_IMG ?= statgate-demo
-CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.1
+CONTROLLER_GEN ?= go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
 
 .PHONY: all
 all: generate manifests build
