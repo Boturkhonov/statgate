@@ -1,0 +1,91 @@
+---
+# Flagger Canary resource for the StatGate demo application.
+#
+# This manifest is provided for a side-by-side comparison with the StatGate
+# CanaryRollout resource (demo/manifests/05-rollout.yaml).
+#
+# Prerequisites:
+#   helm repo add flagger https://flagger.app
+#   helm upgrade -i flagger flagger/flagger \
+#     --namespace=istio-system \
+#     --set meshProvider=istio \
+#     --set metricsServer=http://prometheus-server.monitoring.svc.cluster.local:9090
+#
+# Apply:
+#   kubectl apply -f demo/flagger/canary.yaml
+#
+# NOTE: Flagger manages its own primary/canary deployments from the source
+# deployment "demo".  Make sure you have a Deployment named "demo" in the
+# statgate-demo namespace before applying this resource.
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: demo
+  namespace: statgate-demo
+spec:
+  # Target deployment that Flagger will clone into demo-primary / demo-canary.
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo
+
+  # Istio ingress configuration.
+  ingress:
+    # Flagger injects weight rules into this VirtualService.
+    # Must already exist and reference the demo service.
+    name: demo-vs
+
+  service:
+    port: 8080
+    targetPort: 8080
+    gateways:
+      - demo-gateway.statgate-demo.svc.cluster.local
+    hosts:
+      - demo.statgate.local
+
+  # ── Rollout strategy ──────────────────────────────────────────────────────
+  analysis:
+    # Canary weight starts at 5 % and increases by 20 % on each iteration.
+    # Four iterations → 5 → 25 → 45 → 65 → 85 % (Flagger promotes at 100 %).
+    stepWeight: 20
+    maxWeight: 50
+    # Each analysis step lasts 60 seconds (same cadence as StatGate steps).
+    interval: 60s
+    # Two consecutive failures trigger a rollback.
+    threshold: 2
+    # Maximum time to allow a canary to stay in progress.
+    maxDuration: 10m
+
+    # ── Metrics ─────────────────────────────────────────────────────────────
+    # Flagger uses FIXED THRESHOLDS — it checks whether the measured value
+    # is above or below a hard-coded number during each 60-second window.
+    # There is no statistical test: a single window where error_rate > 0.05
+    # counts as a failure, even if it is caused by a random spike.
+    metrics:
+      - name: error-rate
+        # Built-in Flagger metric template for Prometheus.
+        templateRef:
+          name: error-rate
+          namespace: flagger-system
+        # Hard threshold: canary must have < 5 % errors.
+        # StatGate's SPRT equivalent: delta = 0.05 (same effect size, but
+        # with formal α/β guarantees and sample-size adaptivity).
+        thresholdRange:
+          max: 5       # percent
+        interval: 1m
+
+      - name: latency
+        templateRef:
+          name: latency
+          namespace: flagger-system
+        thresholdRange:
+          max: 500     # milliseconds
+        interval: 1m
+
+    # ── Webhooks (optional) ──────────────────────────────────────────────────
+    # webhooks:
+    #   - name: load-test
+    #     url: http://flagger-loadtester.flagger-system/
+    #     timeout: 5s
+    #     metadata:
+    #       cmd: "hey -z 1m -q 10 -c 2 http://demo.statgate.local/orders"

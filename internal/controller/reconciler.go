@@ -42,9 +42,15 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Terminal states — nothing to do.
-	if rollout.Status.Phase == statgatev1alpha1.PhasePromoted ||
-		rollout.Status.Phase == statgatev1alpha1.PhaseAborted {
+	// Aborted is always terminal — rollback already performed.
+	if rollout.Status.Phase == statgatev1alpha1.PhaseAborted {
+		return ctrl.Result{}, nil
+	}
+
+	// Promoted is terminal unless the user explicitly sets spec.abort=true,
+	// in which case we fall through to the abort handler below so that weights
+	// are reset back to stable=100 / canary=0.
+	if rollout.Status.Phase == statgatev1alpha1.PhasePromoted && !rollout.Spec.Abort {
 		return ctrl.Result{}, nil
 	}
 
@@ -132,7 +138,17 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: pauseDuration}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseRunning, int32(currentStep), canaryWeight, msg)
 	}
 
+	analysisInterval := 10 * time.Second
+	if rollout.Spec.Analysis != nil && rollout.Spec.Analysis.AnalysisIntervalSeconds > 0 {
+		analysisInterval = time.Duration(rollout.Spec.Analysis.AnalysisIntervalSeconds) * time.Second
+	}
+
 	// --- SPRT analysis (runs on EVERY reconcile during pause) ---
+	// We deliberately do NOT call r.Status().Update() here. All status
+	// mutations are collected in-memory and flushed in exactly ONE update
+	// per reconcile cycle at the return point below. This prevents the
+	// "object has been modified" conflict that arises when two Update calls
+	// race against each other within the same reconcile.
 	if rollout.Spec.PrometheusURL != "" && rollout.Spec.Analysis != nil {
 		decision, newState, reason, err := RunSPRT(
 			ctx, rollout.Spec.PrometheusURL,
@@ -140,14 +156,16 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			rollout.Status.AnalysisState,
 		)
 
-		// Always persist updated SPRT state.
-		rollout.Status.AnalysisState = newState
-
 		if err != nil {
 			// Transient error (Prometheus unreachable, etc.) — retry, do NOT abort.
+			// Don't persist potentially partial state on error.
 			logger.Error(err, "SPRT analysis error, will retry")
 			return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
 		}
+
+		// Accumulate state in memory; persisted at the single update below.
+		rollout.Status.AnalysisState = newState
+		rollout.Status.Message = reason
 
 		if decision == SPRTRollback {
 			logger.Info("SPRT: rollback decision reached", "reason", reason)
@@ -157,32 +175,53 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				rollout.Spec.CanaryServiceRef, 0,
 			)
 			msg := fmt.Sprintf("SPRT rollback at step %d: %s", currentStep, reason)
+			// setStatus calls r.Status().Update() — the one and only update
+			// this cycle; AnalysisState set above is included automatically.
 			return ctrl.Result{}, r.setStatus(ctx, &rollout, statgatev1alpha1.PhaseAborted,
 				int32(currentStep), 0, msg)
-		}
-
-		// Persist SPRT state without resetting LastTransitionTime.
-		// We call r.Status().Update() directly instead of setStatus()
-		// to avoid resetting the pause timer on every analysis cycle.
-		rollout.Status.Message = reason
-		if err := r.Status().Update(ctx, &rollout); err != nil {
-			return ctrl.Result{}, err
 		}
 	}
 
 	// --- Timer check (pause must still elapse before advancing) ---
 	if elapsed < pauseDuration {
-		analysisInterval := 10 * time.Second
-		if rollout.Spec.Analysis != nil && rollout.Spec.Analysis.AnalysisIntervalSeconds > 0 {
-			analysisInterval = time.Duration(rollout.Spec.Analysis.AnalysisIntervalSeconds) * time.Second
-		}
 		remaining := pauseDuration - elapsed
 		requeue := analysisInterval
 		if remaining < requeue {
 			requeue = remaining
 		}
 		logger.Info("waiting at current step", "step", currentStep, "remaining", remaining.Round(time.Second))
+		// Single status update for this cycle: persists AnalysisState + Message
+		// set by the SPRT block above without resetting LastTransitionTime.
+		if err := r.Status().Update(ctx, &rollout); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{RequeueAfter: requeue}, nil
+	}
+
+	// --- SPRT gate: require explicit promote decision before advancing ---
+	// Only applies when a pause is configured (pauseSeconds > 0) and analysis
+	// is enabled. Steps with pauseSeconds=0 are "set weight and advance
+	// immediately" steps — SPRT is not meaningful there.
+	// Without this gate, the step would advance on timer expiry even when
+	// SPRT is still collecting evidence (e.g. no real user traffic yet).
+	if pauseDuration > 0 && rollout.Spec.Analysis != nil {
+		allPromote := len(rollout.Status.AnalysisState) > 0
+		for _, s := range rollout.Status.AnalysisState {
+			if s.Decision != "promote" {
+				allPromote = false
+				break
+			}
+		}
+		if !allPromote {
+			msg := fmt.Sprintf("Step %d: timer elapsed, waiting for SPRT promote decision", currentStep)
+			logger.Info(msg)
+			rollout.Status.Message = msg
+			// Single status update for this cycle.
+			if err := r.Status().Update(ctx, &rollout); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: analysisInterval}, nil
+		}
 	}
 
 	// --- Advance to next step ---

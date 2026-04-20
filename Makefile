@@ -35,8 +35,8 @@ build: generate fmt vet ## Build controller binary
 	go build -o bin/statgate-controller ./cmd/
 
 .PHONY: build-cli
-build-cli: ## Build statgatectl client binary
-	go build -o bin/statgatectl ./cmd/statgatectl/
+build-cli: ## Build statctl client binary
+	go build -o bin/statctl ./cmd/statctl/
 
 .PHONY: run
 run: generate fmt vet ## Run controller from host (for development)
@@ -80,6 +80,14 @@ demo: ## Apply demo manifests
 .PHONY: demo-clean
 demo-clean: ## Remove demo resources
 	kubectl delete -f demo/manifests/ --ignore-not-found
+
+.PHONY: demo-loadtest
+demo-loadtest: ## Run k6 load test against the demo (requires k6 installed)
+	k6 run demo/loadtest/load-test.js
+
+.PHONY: demo-loadtest-error
+demo-loadtest-error: ## Run k6 with error injection (triggers SPRT rollback)
+	k6 run --env ERROR_SCENARIO=true demo/loadtest/load-test.js
 
 ##@ Help
 

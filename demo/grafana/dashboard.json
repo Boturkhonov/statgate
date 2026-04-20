@@ -1,0 +1,412 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "StatGate canary rollout — live traffic, SPRT analysis and rollout progress",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate by Version",
+      "description": "HTTP requests per second split by stable and canary deployments.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "reqps"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "stable" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "canary" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(http_requests_total{version=\"stable\",namespace=\"statgate-demo\"}[1m]))",
+          "legendFormat": "stable",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(http_requests_total{version=\"canary\",namespace=\"statgate-demo\"}[1m]))",
+          "legendFormat": "canary",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Error Rate by Version",
+      "description": "Fraction of 5xx responses. SPRT rollback triggers when canary error rate exceeds stable by Δ=0.05.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "stable" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "canary" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "rollback threshold (p0+Δ)" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }, { "id": "custom.lineStyle", "value": { "dash": [8, 4], "fill": "dash" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"stable\",namespace=\"statgate-demo\"}[1m])) / sum(rate(http_requests_total{version=\"stable\",namespace=\"statgate-demo\"}[1m]))",
+          "legendFormat": "stable",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"canary\",namespace=\"statgate-demo\"}[1m])) / sum(rate(http_requests_total{version=\"canary\",namespace=\"statgate-demo\"}[1m]))",
+          "legendFormat": "canary",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"stable\",namespace=\"statgate-demo\"}[1m])) / sum(rate(http_requests_total{version=\"stable\",namespace=\"statgate-demo\"}[1m])) + 0.05",
+          "legendFormat": "rollback threshold (p0+Δ)",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "P95 Latency by Version",
+      "description": "95th-percentile request latency for stable and canary deployments.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version=\"stable\",namespace=\"statgate-demo\"}[1m])) by (le))",
+          "legendFormat": "stable p95",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version=\"canary\",namespace=\"statgate-demo\"}[1m])) by (le))",
+          "legendFormat": "canary p95",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "SPRT Log-Likelihood Ratio (Λ)",
+      "description": "Accumulated SPRT statistic Λ for the error-rate metric. Λ ≥ A → rollback; Λ ≤ B → promote. Read from CanaryRollout status via kube-state-metrics custom collector (or StatGate Prometheus exporter).",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 5 },
+          "unit": "short"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "A (rollback boundary)" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }, { "id": "custom.lineStyle", "value": { "dash": [8, 4], "fill": "dash" } }] },
+          { "matcher": { "id": "byName", "options": "B (promote boundary)" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }, { "id": "custom.lineStyle", "value": { "dash": [8, 4], "fill": "dash" } }] }
+        ]
+      },
+      "options": {
+        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_sprt_log_likelihood{rollout=\"demo-rollout\",metric=\"error-rate\",namespace=\"statgate-demo\"}",
+          "legendFormat": "Λ (log-likelihood)",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_sprt_boundary_a{rollout=\"demo-rollout\",namespace=\"statgate-demo\"}",
+          "legendFormat": "A (rollback boundary)",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_sprt_boundary_b{rollout=\"demo-rollout\",namespace=\"statgate-demo\"}",
+          "legendFormat": "B (promote boundary)",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Canary Traffic Weight (%)",
+      "description": "Percentage of traffic routed to the canary version via Istio VirtualService.",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "#FF9830", "mode": "fixed" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20 },
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        }
+      },
+      "options": {
+        "legend": { "displayMode": "hidden" },
+        "tooltip": { "mode": "single" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_canary_weight{rollout=\"demo-rollout\",namespace=\"statgate-demo\"}",
+          "legendFormat": "canary weight %",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Rollout Phase",
+      "description": "Current phase of the CanaryRollout (0=Pending, 1=Running, 2=Paused, 3=Promoted, 4=Aborted, 5=Failed).",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue",   "value": null },
+              { "color": "green",  "value": 3 },
+              { "color": "red",    "value": 4 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "Pending" }, "1": { "text": "Running" }, "2": { "text": "Paused" }, "3": { "text": "Promoted" }, "4": { "text": "Aborted" }, "5": { "text": "Failed" } } }
+          ]
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "auto", "colorMode": "background" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_rollout_phase{rollout=\"demo-rollout\",namespace=\"statgate-demo\"}",
+          "legendFormat": "phase",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "SPRT Observations",
+      "description": "Total canary requests observed by the SPRT accumulator for the error-rate metric.",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "text", "mode": "fixed" },
+          "unit": "short"
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "textMode": "value_and_name", "colorMode": "none" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_sprt_observations{rollout=\"demo-rollout\",metric=\"error-rate\",namespace=\"statgate-demo\"}",
+          "legendFormat": "observations",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "statgate_sprt_failures{rollout=\"demo-rollout\",metric=\"error-rate\",namespace=\"statgate-demo\"}",
+          "legendFormat": "failures",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "По endpoint",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+      "collapsed": false
+    },
+    {
+      "id": 9,
+      "title": "Запросы по endpoint (req/s)",
+      "description": "HTTP-запросы в секунду в разбивке по методу, пути и версии. Позволяет видеть распределение нагрузки между endpoint-ами и сравнить поведение stable/canary на каждом из них.",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 6 },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (method, path, version) (label_replace(rate(http_requests_total{namespace=\"statgate-demo\", path!=\"/metrics\", path!=\"/healthz\"}[1m]), \"path\", \"$1{id}$3\", \"path\", \"(.*/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(.*)\"))",
+          "legendFormat": "{{version}}  {{method}} {{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Ошибки по endpoint (5xx %)",
+      "description": "Доля 5xx-ответов для каждого endpoint в разбивке по версии. Наглядно показывает, на каком именно endpoint инжектируются ошибки в canary-версии.",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (method, path, version) (label_replace(rate(http_requests_total{status_code=~\"5..\", namespace=\"statgate-demo\", path!=\"/metrics\"}[1m]), \"path\", \"$1{id}$3\", \"path\", \"(.*/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(.*)\")) / sum by (method, path, version) (label_replace(rate(http_requests_total{namespace=\"statgate-demo\", path!=\"/metrics\"}[1m]), \"path\", \"$1{id}$3\", \"path\", \"(.*/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(.*)\"))",
+          "legendFormat": "{{version}}  {{method}} {{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "P95 задержка по endpoint",
+      "description": "95-й перцентиль задержки в разбивке по endpoint и версии. Сравнение stable/canary позволяет выявить деградацию latency, не отражённую в error rate.",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 6 },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "histogram_quantile(0.95, sum by (method, path, version, le) (label_replace(rate(http_request_duration_seconds_bucket{namespace=\"statgate-demo\", path!=\"/metrics\", path!=\"/healthz\"}[1m]), \"path\", \"$1{id}$3\", \"path\", \"(.*/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(.*)\")))",
+          "legendFormat": "{{version}}  {{method}} {{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "HTTP-статусы по endpoint (heatmap)",
+      "description": "Количество ответов каждого статус-кода для каждого endpoint. Удобно для диагностики: видно 2xx/4xx/5xx по каждому методу и пути.",
+      "type": "barchart",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 41 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 80 },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "barWidth": 0.7,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" },
+        "xField": "Time",
+        "orientation": "auto",
+        "stacking": "normal"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (method, path, status_code, version) (label_replace(rate(http_requests_total{namespace=\"statgate-demo\", path!=\"/metrics\", path!=\"/healthz\"}[1m]), \"path\", \"$1{id}$3\", \"path\", \"(.*/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(.*)\"))",
+          "legendFormat": "{{version}} {{method}} {{path}} → {{status_code}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["statgate", "canary", "sprt", "istio"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource",
+        "label": "Prometheus"
+      }
+    ]
+  },
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "StatGate — Canary Rollout",
+  "uid": "statgate-canary-sprt",
+  "version": 1
+}

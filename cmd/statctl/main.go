@@ -1,4 +1,4 @@
-// statgatectl is the command-line client for the StatGate canary rollout
+// statctl is the command-line client for the StatGate canary rollout
 // operator. It offers a kubectl-like UX focused solely on CanaryRollout
 // resources (list/get/apply/pause/resume/abort/delete) and a live dashboard
 // subcommand (watch) that renders SPRT accumulator state in real time.
@@ -51,7 +51,7 @@ func main() {
 	case "watch":
 		err = cmdWatch(ctx, args)
 	case "version", "--version", "-v":
-		fmt.Printf("statgatectl %s\n", version)
+		fmt.Printf("statctl %s\n", version)
 	case "help", "--help", "-h":
 		usage()
 	default:
@@ -69,10 +69,10 @@ func main() {
 }
 
 func usage() {
-	fmt.Print(`statgatectl — manage StatGate canary rollouts
+	fmt.Print(`statctl — manage StatGate canary rollouts
 
 Usage:
-  statgatectl <command> [args] [flags]
+  statctl <command> [args] [flags]
 
 Commands:
   list                 List canary rollouts in a namespace
@@ -94,11 +94,11 @@ Watch-only flags:
   --interval <seconds>    Refresh cadence (default 2)
 
 Examples:
-  statgatectl apply -f demo/manifests/05-rollout.yaml
-  statgatectl list -n statgate-demo
-  statgatectl watch demo-rollout -n statgate-demo
-  statgatectl pause demo-rollout -n statgate-demo
-  statgatectl abort demo-rollout -n statgate-demo
+  statctl apply -f demo/manifests/05-rollout.yaml
+  statctl list -n statgate-demo
+  statctl watch demo-rollout -n statgate-demo
+  statctl pause demo-rollout -n statgate-demo
+  statctl abort demo-rollout -n statgate-demo
 `)
 }
 

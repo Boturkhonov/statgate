@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -40,16 +41,35 @@ func cmdWatch(ctx context.Context, args []string) error {
 		refresh = time.Second
 	}
 
+	// First render: clear the screen once so the dashboard occupies the full
+	// terminal from the top. Subsequent renders move the cursor back to the
+	// home position and overwrite in place — the same technique used by top(1).
+	firstRender := true
+
 	render := func() {
 		cr := &statgatev1alpha1.CanaryRollout{}
 		getErr := c.Get(ctx, client.ObjectKey{Namespace: cf.namespace, Name: name}, cr)
-		clearScreen()
+
+		var buf bytes.Buffer
 		if getErr != nil {
-			fmt.Fprintf(os.Stdout, "error fetching %s/%s: %v\n", cf.namespace, name, getErr)
-			return
+			fmt.Fprintf(&buf, "error fetching %s/%s: %v\n", cf.namespace, name, getErr)
+		} else {
+			renderRollout(&buf, cr, time.Now())
 		}
-		renderRollout(os.Stdout, cr, time.Now())
-		fmt.Printf("\n(refreshing every %s — press Ctrl+C to exit)\n", refresh)
+		fmt.Fprintf(&buf, "\n(refreshing every %s — press Ctrl+C to exit)\n", refresh)
+
+		if firstRender {
+			// Full clear on the very first paint so the dashboard starts at row 0.
+			fmt.Print("\x1b[2J")
+			firstRender = false
+		}
+		// Move cursor to top-left, write the new frame, then erase anything
+		// below the current cursor position (leftover lines from a taller
+		// previous frame). This is the same approach used by top(1) and
+		// watch(1): no flicker, no blank-screen flash.
+		fmt.Print("\x1b[H")
+		os.Stdout.Write(buf.Bytes())
+		fmt.Print("\x1b[J")
 	}
 
 	render()
@@ -58,17 +78,10 @@ func cmdWatch(ctx context.Context, args []string) error {
 	for {
 		select {
 		case <-ctx.Done():
+			fmt.Print("\x1b[?25h") // restore cursor visibility on exit
 			return nil
 		case <-ticker.C:
 			render()
 		}
 	}
-}
-
-// clearScreen emits the ANSI "erase display + home cursor" escape sequence.
-// Modern Windows terminals (Windows Terminal, VS Code, recent PowerShell, git
-// bash) all interpret ANSI. On exotic consoles the sequence becomes harmless
-// noise and the output simply scrolls.
-func clearScreen() {
-	fmt.Print("\x1b[2J\x1b[H")
 }

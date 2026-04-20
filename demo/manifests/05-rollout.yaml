@@ -15,10 +15,10 @@ spec:
     analysisIntervalSeconds: 10
     metrics:
       - name: error-rate
-        canaryTotalQuery: 'sum(http_requests_total{version="canary"})'
-        canaryFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="canary"}) or vector(0)'
-        stableTotalQuery: 'sum(http_requests_total{version="stable"})'
-        stableFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="stable"}) or vector(0)'
+        canaryTotalQuery: 'sum(http_requests_total{version="canary", path!="/healthz", path!="/metrics"})'
+        canaryFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="canary", path!="/healthz", path!="/metrics"}) or vector(0)'
+        stableTotalQuery: 'sum(http_requests_total{version="stable", path!="/healthz", path!="/metrics"})'
+        stableFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="stable", path!="/healthz", path!="/metrics"}) or vector(0)'
         delta: 0.05
   steps:
     - weight: 5

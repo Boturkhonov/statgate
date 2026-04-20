@@ -2,9 +2,19 @@ package main
 
 import (
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 )
+
+// uuidRE matches a standard UUID v4 in a URL path segment.
+var uuidRE = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+// normalizePath replaces UUID path segments with the literal "{id}" so that
+// Prometheus labels aggregate /orders/<uuid> into /orders/{id}.
+func normalizePath(p string) string {
+	return uuidRE.ReplaceAllString(p, "{id}")
+}
 
 // statusRecorder wraps http.ResponseWriter to capture the written status code.
 type statusRecorder struct {
@@ -27,7 +37,7 @@ func MetricsMiddleware(version string, next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 
 		duration := time.Since(start).Seconds()
-		path := r.URL.Path
+		path := normalizePath(r.URL.Path)
 		statusStr := strconv.Itoa(rec.status)
 
 		httpRequestsTotal.WithLabelValues(r.Method, path, statusStr, version).Inc()
