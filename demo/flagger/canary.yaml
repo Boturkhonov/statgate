@@ -2,7 +2,7 @@
 # Flagger Canary resource for the StatGate demo application.
 #
 # This manifest is provided for a side-by-side comparison with the StatGate
-# CanaryRollout resource (demo/manifests/05-rollout.yaml).
+# CanaryRollout resource (demo/manifests/optional/05-rollout.yaml).
 #
 # Prerequisites:
 #   helm repo add flagger https://flagger.app

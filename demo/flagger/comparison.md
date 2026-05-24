@@ -1,211 +1,109 @@
-# StatGate vs Flagger — Comparison Test Cases
+# StatGate vs Flagger — экспериментальное сравнение
 
-This document describes concrete scenarios where StatGate's SPRT-based analysis
-outperforms Flagger's threshold-based approach.  Each scenario can be reproduced
-with the demo application and the accompanying k6 load test.
+Документ описывает воспроизводимые сценарии, в которых SPRT-подход StatGate и threshold-подход Flagger демонстрируют различное поведение. Каждый сценарий имеет конфигурации, скрипты применения и ожидаемые результаты в [`demo/scenarios/`](../scenarios/).
 
----
+## Теоретическая основа
 
-## Background
+| Свойство                        | Flagger (порог)                                   | StatGate (SPRT)                                                      |
+|---------------------------------|---------------------------------------------------|----------------------------------------------------------------------|
+| Правило принятия решения        | metric > threshold → fail (memoryless per window) | Λ ≥ A → rollback; Λ ≤ B → promote (накопительное)                    |
+| Гарантия P(ложного отката)      | нет                                               | ≤ α (по умолчанию 0.05)                                              |
+| Гарантия P(пропуска деградации) | нет                                               | ≤ β (по умолчанию 0.05)                                              |
+| Объём выборки                   | фиксированный на шаг (`interval` × шаги)          | адаптивный — тест останавливается, как только Λ пересекает A или B   |
+| Память между окнами             | нет                                               | да (Λ накапливается через все циклы шага)                            |
+| Влияние трафика                 | порог одинаков при 10 и 10000 RPS                 | меньше трафика → больше времени до решения; гарантии α/β сохраняются |
+| Модель данных                   | произвольная метрика, абсолютное значение         | Bernoulli (success/failure); см. ограничения                         |
 
-| Property | Flagger (threshold) | StatGate (SPRT) |
+## Сценарий 1 — Borderline error rate (главный кейс)
+
+**Файлы:** [`demo/scenarios/01-borderline/`](../scenarios/01-borderline/)
+
+**Гипотеза.** Canary имеет реальную деградацию (4.5%) которая ниже абсолютного порога Flagger (5%), но выше baseline (2%) на статистически значимую величину.
+
+**Setup:** stable `ERROR_RATE_START=0.02`, canary `ERROR_RATE_START=0.045`. StatGate `delta=0.02`, Flagger `thresholdRange.max=5`.
+
+**Ожидание.**
+- Flagger пропускает все шаги, **Succeeded**. Версия с 2.25× ошибок baseline идёт в прод.
+- StatGate накапливает Λ ≥ A ≈ 2.94 за ~250–300 canary-запросов и откатывает. **Aborted** на 2–3-м шаге.
+
+**Аргумент защиты.** На одних и тех же данных два инструмента дают **противоположные** решения. Это прямая иллюстрация: Flagger смотрит на абсолютный порог "это плохо?", StatGate — на статистическую значимость "это хуже baseline?".
+
+**Фактические результаты:**
+
+| Метрика | StatGate | Flagger |
 |---|---|---|
-| Decision rule | canary_metric > threshold → fail | Λ ≥ A → rollback; Λ ≤ B → promote |
-| False rollback rate | uncontrolled | ≤ α (configurable, default 5 %) |
-| Missed degradation rate | uncontrolled | ≤ β (configurable, default 5 %) |
-| Sample size | fixed per step | adaptive (stops as soon as enough evidence) |
-| State across windows | none (memoryless) | accumulated (persistent log-likelihood Λ) |
-| Sensitivity to traffic volume | same threshold at 10 req/s and 10 000 req/s | automatically adjusts: less traffic → more steps needed |
+| Финальное состояние | _(заполнить после прогона)_ | _(заполнить)_ |
+| Время до решения | _(заполнить)_ | _(заполнить)_ |
+| Шаг, на котором принято решение | _(заполнить)_ | _(заполнить)_ |
 
----
+## Сценарий 2 — Slow drift (накопление улик)
 
-## Test Case 1 — False Rollback Under Transient Traffic Spikes
+**Файлы:** [`demo/scenarios/02-slow-drift/`](../scenarios/02-slow-drift/)
 
-**Hypothesis:** Flagger aborts a healthy canary when a short spike raises the
-error rate above the threshold in a single analysis window.  StatGate does not.
+**Гипотеза.** Canary деградирует постепенно (1% → 6% за 5 минут). В каждом отдельном 60-секундном окне Flagger видит локально-низкий error rate (1–5%) — нигде явно не превышая порог. Память между окнами отсутствует, нет способа заметить тренд. SPRT накапливает Λ через циклы и реагирует на устойчивое смещение от baseline.
 
-**Setup:**
-- Deploy v2 with `ERROR_RATE=0` (perfectly healthy canary).
-- Inject one burst of errors lasting 15 seconds at minute 1 using k6:
-  ```bash
-  k6 run --env BASE_URL=http://localhost:8080 --env ERROR_SCENARIO=true \
-         --duration 15s --vus 100 demo/loadtest/load-test.js
-  ```
-- Immediately return to normal load.
+**Setup:** stable `ERROR_RATE=0.01`, canary `ERROR_RATE_START=0.01`, `ERROR_RATE_END=0.06`, `ERROR_RATE_RAMP_SECONDS=300`. StatGate `delta=0.02`, Flagger `thresholdRange.max=5`.
 
-**Expected Flagger behaviour:**
-The 60-second analysis window at step 1 captures the spike.  If canary error
-rate in that window exceeds 5 %, Flagger counts a failure.  After `threshold: 2`
-consecutive failures it aborts — even though the canary is fundamentally healthy.
+**Ожидание.**
+- Flagger пропускает все окна (3.5% < 5%, 4.5% < 5% и т.д.), **Succeeded**. 6%-ная версия (6× baseline) идёт в прод.
+- StatGate откатывает во второй половине rollout, когда p̂_canary стабильно превышает p₀+delta=3%. **Aborted**.
 
-**Expected StatGate behaviour:**
-The 15-second burst adds a small positive increment to Λ.  Subsequent clean
-traffic increments are negative (log-likelihood favours H₀).  Λ stays far from
-boundary A.  The rollout advances normally.
+**Аргумент защиты.** Реальные деградации часто не "включаются" мгновенно — это утечка памяти, медленное насыщение БД, рост retry rate из-за остывания кэша. Memory-less пороги такие тренды пропускают. SPRT — нет.
 
-**Why StatGate wins:**
-SPRT accumulates evidence across all observations.  A transient spike contributes
-one increment; hundreds of subsequent healthy requests contribute many negative
-increments, pulling Λ back toward the promote boundary B.  Flagger's per-window
-check has no memory of the healthy traffic that follows.
+**Фактические результаты:**
 
----
+| Метрика | StatGate | Flagger |
+|---|---|---|
+| Финальное состояние | _(заполнить)_ | _(заполнить)_ |
+| Время до решения | _(заполнить)_ | _(заполнить)_ |
+| Шаг, на котором принято решение | _(заполнить)_ | _(заполнить)_ |
 
-## Test Case 2 — Slow Degradation Detection (Small Effect Size)
+## Сценарий 3 — Transient spike (границы применимости)
 
-**Hypothesis:** When the canary has a slight but real degradation (Δ = 2 %),
-Flagger misses it (below the threshold) while StatGate detects it given enough
-observations.
+**Файлы:** [`demo/scenarios/03-transient-spike/`](../scenarios/03-transient-spike/)
 
-**Setup:**
-- Deploy v2 with `ERROR_RATE=0.03` (canary: 3 % errors; stable: 1 % errors).
-- Threshold check: 3 % < 5 % → Flagger sees no issue.
-- Run k6 normal load for the full rollout duration (≈ 4 minutes at 50 VUs).
+**Гипотеза.** Canary фундаментально здоровый (1%), но имеет один короткий всплеск (15 секунд, rate 40%) — типичный случай cold-start кэша, GC-паузы или короткого глюка downstream. Это **не** повод откатывать релиз.
 
-**Expected Flagger behaviour:**
-Flagger promotes the canary at each step because 3 % < 5 %.  The degraded
-version reaches 100 % traffic and is promoted to production despite a 3× higher
-error rate than stable.
+**Особенность.** При тщательном подсчёте Λ выясняется, что даже короткий всплеск 15 секунд × rate 0.4 даёт прирост Λ ≈ +68, что значительно превышает A ≈ 2.94. То есть **SPRT на таких параметрах тоже откатывает**.
 
-**Expected StatGate behaviour (delta = 0.05, but detects smaller effects given volume):**
-With delta = 0.02 (configured for this scenario), SPRT accumulates negative
-log-likelihood at ~1 000 requests, enough evidence crosses boundary A.  The
-rollout is aborted before the canary reaches 50 % traffic.
+Это **ожидаемое и корректное поведение**: SPRT — статистически чувствительный тест, он не игнорирует данные. Свойство false-positive resistance проявляется только относительно меньших всплесков или больших delta.
 
-```yaml
-# Adjusted analysis for this test case
-analysis:
-  alpha: 0.05
-  beta:  0.05
-  metrics:
-    - name: error-rate
-      delta: 0.02          # detect a 2 % uplift above baseline
-      ...
-```
+**Setup:** stable `ERROR_RATE=0.01`, canary `ERROR_RATE_START=0.01`, spike `AT=90s, DURATION=15s, RATE=0.4`. StatGate `delta=0.05`, Flagger `thresholdRange.max=5, threshold=2`.
 
-**Why StatGate wins:**
-The SPRT effect size parameter `delta` is decoupled from the raw threshold.
-StatGate can detect *any* specified uplift given sufficient sample size, whereas
-Flagger can only catch degradations above its hard-coded threshold.
+**Аргумент защиты (переформулированный).** Преимущество SPRT не в том, что он "не реагирует на шум", а в том, что критерий реакции **выводится из α/β, а не подбирается эвристически**. Если оба инструмента откатят (как при сильном спайке), то у Flagger это случайное совпадение порога с природой шума, а у StatGate — формально обоснованное решение с known error rates. Это уже точка для обсуждения **в каких диапазонах параметров каждый подход лучше** — что само по себе вклад работы.
 
----
+**Фактические результаты:**
 
-## Test Case 3 — Early Promotion Under Low Traffic (Adaptive Sample Size)
-
-**Hypothesis:** With very low traffic (10 req/s), StatGate promotes a healthy
-canary in fewer steps than Flagger's fixed-window schedule.
-
-**Setup:**
-- Deploy v2 with `ERROR_RATE=0` (healthy).
-- Limit load to 10 VUs (≈ 5 req/s to canary at 50 % weight).
-- Flagger: `stepWeight: 20`, `interval: 60s` — always waits 60 seconds per step.
-- StatGate: same `pauseSeconds: 60` per step, but SPRT may cross the promote
-  boundary B before the pause ends if evidence accumulates quickly.
-
-**Expected Flagger behaviour:**
-Flagger always waits the full `interval` (60 s) × number of steps (4) = 4
-minutes regardless of traffic quality.
-
-**Expected StatGate behaviour:**
-At step 1 (5 % weight, ~0.5 req/s to canary), SPRT observes 30 requests in
-60 seconds.  Λ approaches B but likely does not cross it — StatGate waits.
-By step 3 (50 % weight, 2.5 req/s), 150 requests accumulate; Λ crosses B well
-before the 60-second pause ends.  StatGate advances immediately.
-
-> Note: In the current implementation, StatGate still waits for `pauseSeconds`
-> to elapse before advancing.  The SPRT promote decision gates the *next*
-> step: the controller will not advance until both the pause timer expires AND
-> (if analysis is configured) SPRT decides "promote".  This prevents premature
-> promotion from a single healthy window.
-
-**Why StatGate wins:**
-SPRT's adaptive nature means the operator collects the minimum number of
-observations needed to reach a decision with the target error guarantees — no
-more, no less.  Wald (1945) proved SPRT minimises expected sample size among all
-sequential tests with the same α and β bounds.
-
----
-
-## Test Case 4 — Formal Error Rate Guarantees
-
-**Hypothesis:** Flagger provides no mathematical bound on false rollback or
-missed-degradation probability.  StatGate does.
-
-**Setup:** Monte Carlo simulation (no Kubernetes required).
-
-Run the included simulation to measure empirical α' and β':
-
-```bash
-# Estimate false-rollback rate (canary identical to stable)
-go run ./demo/flagger/simulate/main.go --scenario=h0 --runs=10000
-
-# Estimate missed-degradation rate (canary +5 % errors)
-go run ./demo/flagger/simulate/main.go --scenario=h1 --runs=10000
-```
-
-**Expected results (StatGate):**
-```
-H0 scenario (healthy canary): rollback rate = 3.8 %  (target ≤ 5 %)
-H1 scenario (5 % uplift):     promote rate  = 4.1 %  (target ≤ 5 %)
-```
-
-**Expected results (Flagger, single-window threshold = 5 %):**
-With n=300 requests per window and a binomial distribution under H₀ (p₀ = 1 %),
-the probability that a single window yields > 5 % errors is:
-```
-P(X/n > 0.05 | p₀ = 0.01, n = 300) ≈ 2.3 × 10⁻⁸   (false alarm too low)
-```
-But under higher variance (small n or variable load), the false-alarm rate is
-uncontrolled and cannot be stated in advance.
-
-**Why StatGate wins:**
-Wald's inequalities guarantee α' ≤ α/(1−β) and β' ≤ β/(1−α) (see proof in
-the thesis body, Section 3.2).  These bounds hold regardless of traffic volume,
-baseline error rate, or observation window size.
-
----
-
-## Summary
-
-| Scenario | Flagger outcome | StatGate outcome | Advantage |
+| Параметры спайка | StatGate Λ_max | StatGate исход | Flagger исход |
 |---|---|---|---|
-| Transient spike (healthy canary) | False rollback | No rollback | StatGate: memory across windows |
-| Slow degradation (Δ < threshold) | Missed, promotes bad canary | Detected, rollback | StatGate: tunable effect size |
-| High traffic, healthy canary | Fixed wait (full schedule) | Evidence accumulates fast | StatGate: fewer wasted seconds |
-| Low traffic, healthy canary | Same fixed wait | Same fixed wait (conservative) | Parity (by design — timer still governs) |
-| Formal error guarantees | None | α ≤ 5 %, β ≤ 5 % (proven) | StatGate: mathematical rigour |
+| `DURATION=15, RATE=0.4` | _(заполнить)_ | _(заполнить)_ | _(заполнить)_ |
+| `DURATION=5, RATE=0.15` | _(заполнить)_ | _(заполнить)_ | _(заполнить)_ |
 
----
+## Сводная таблица
 
-## Running the Comparison
+| Сценарий | Свойство SPRT | Flagger | StatGate | Сила аргумента |
+|---|---|---|---|---|
+| 01 Borderline | False-negative resistance | Succeeded (баг в проде) | Aborted | ★★★ ключевой |
+| 02 Slow drift | Adaptive detection | Succeeded (баг в проде) | Aborted | ★★★ ключевой |
+| 03 Transient spike | False-positive resistance | Зависит от длины спайка | Зависит от параметров | ★ обсуждение |
 
-```bash
-# 1. Deploy the StatGate demo
-kubectl apply -f demo/manifests/
+## Ограничения текущей реализации
 
-# 2. Apply the StatGate rollout
-kubectl apply -f demo/manifests/05-rollout.yaml
+1. **Только Bernoulli-модель.** StatGate работает с метрикой вида "доля бракованных запросов". Поле `CanaryFailureQuery` ожидает counter ошибок (например, HTTP 5xx). Continuous-метрики (latency, memory) **не поддерживаются напрямую** — для них пришлось бы реализовать Gaussian SPRT (Wald, Sequential Analysis, гл. 4) или применить пороговое преобразование ("latency > 500ms" → fail). Это естественное направление будущей работы.
 
-# 3. Start load test (healthy canary)
-k6 run demo/loadtest/load-test.js
+2. **Stable как живой baseline.** p₀ берётся из метрик stable, а не задаётся явно. Если stable шумит (низкий трафик, недостаточная статистика), оценка p̂_stable может быть смещённой. В сценариях полагаемся на стабильную нагрузку k6 и достаточный объём трафика.
 
-# 4. Watch rollout progress
-./bin/statctl watch demo-rollout -n statgate-demo
+3. **Counter resets.** Если Prometheus counter сбрасывается (рестарт пода), приходящие отрицательные дельты обрабатываются как сброс состояния SPRT. Это **снижает чувствительность** в момент сразу после рестарта, но иначе пришлось бы интерпретировать ресет как успешные/неуспешные наблюдения с непредсказуемым знаком — что хуже.
 
-# --- repeat with Flagger ---
+4. **Одна метрика на анализ (фактически).** Несколько `SPRTMetric` обрабатываются независимо, без объединения свидетельств через combined log-likelihood. Это упрощение — корректное при условной независимости метрик, но потенциально неоптимальное.
 
-# 5. Remove StatGate rollout, install Flagger
-kubectl delete -f demo/manifests/05-rollout.yaml
-helm upgrade -i flagger flagger/flagger --namespace=istio-system \
-  --set meshProvider=istio \
-  --set metricsServer=http://prometheus-server.monitoring.svc.cluster.local:9090
+## Что НЕ покрывают эти сценарии
 
-# 6. Apply Flagger canary
-kubectl apply -f demo/flagger/canary.yaml
+- **Latency-based canary analysis** — не поддерживается моделью.
+- **Multi-cluster rollouts** — out of scope.
+- **Auto-tuning delta/alpha/beta** — параметры задаются вручную в спецификации.
+- **Формальная численная проверка α/β через Monte Carlo** — оставлено за рамками. Гарантии α/β опираются на классическое доказательство Wald (1945) и неравенства SPRT.
 
-# 7. Trigger rollout by changing the deployment image tag
-kubectl set image deployment/demo demo=statgate-demo:v2 -n statgate-demo
+## Запуск экспериментов
 
-# 8. Watch Flagger events
-kubectl describe canary demo -n statgate-demo
-```
+См. [`demo/scenarios/README.md`](../scenarios/README.md) — общая схема прогонов, установка Flagger, что фиксировать после каждого прогона.

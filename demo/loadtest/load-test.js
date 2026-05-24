@@ -109,7 +109,10 @@ export default function () {
     }
   } else {
     // 30 % of the time: list orders (read path).
-    const res = http.get(`${BASE_URL}/orders`, HOST_HEADER);
+    // Явный limit=50 — чтобы latency GET /orders не росла со временем
+    // по мере накопления записей в таблице (default API равен этому же значению,
+    // но фиксируем явно для воспроизводимости нагрузки).
+    const res = http.get(`${BASE_URL}/orders?limit=50`, HOST_HEADER);
     const ok  = check(res, { 'list: status 200': (r) => r.status === 200 });
     errorRate.add(!ok);
     orderList.add(res.timings.duration);

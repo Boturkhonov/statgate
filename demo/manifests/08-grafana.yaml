@@ -1,9 +1,10 @@
 ---
 # Grafana deployment for the StatGate demo.
-# Mounts the StatGate dashboard JSON as a provisioned dashboard so it appears
-# automatically on first startup — no manual import needed.
+# Dashboard JSON is provisioned automatically — see kustomization.yaml in this
+# directory: configMapGenerator builds `grafana-dashboard-statgate` from
+# grafana-dashboard.json. This file therefore omits the dashboard ConfigMap.
 #
-# Apply:  kubectl apply -f demo/manifests/08-grafana.yaml
+# Apply:  kubectl apply -k demo/manifests/
 # Access: kubectl port-forward svc/grafana -n statgate-demo 3000:3000
 #         then open http://localhost:3000  (admin / admin)
 apiVersion: v1
@@ -44,75 +45,6 @@ data:
         updateIntervalSeconds: 30
         options:
           path: /var/lib/grafana/dashboards
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-dashboard-statgate
-  namespace: statgate-demo
-  labels:
-    app: grafana
-data:
-  statgate.json: |
-    {
-      "title": "StatGate — Canary Rollout",
-      "uid": "statgate-canary-sprt",
-      "schemaVersion": 38,
-      "refresh": "10s",
-      "tags": ["statgate", "canary", "sprt"],
-      "time": { "from": "now-15m", "to": "now" },
-      "templating": {
-        "list": [
-          { "name": "DS_PROMETHEUS", "type": "datasource", "query": "prometheus" }
-        ]
-      },
-      "panels": [
-        {
-          "id": 1, "type": "timeseries",
-          "title": "Request Rate by Version",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "fieldConfig": { "defaults": { "unit": "reqps" } },
-          "targets": [
-            { "expr": "sum(rate(http_requests_total{version=\"stable\"}[1m]))", "legendFormat": "stable", "refId": "A" },
-            { "expr": "sum(rate(http_requests_total{version=\"canary\"}[1m]))", "legendFormat": "canary", "refId": "B" }
-          ]
-        },
-        {
-          "id": 2, "type": "timeseries",
-          "title": "Error Rate by Version",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } },
-          "targets": [
-            { "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"stable\"}[1m])) / sum(rate(http_requests_total{version=\"stable\"}[1m]))", "legendFormat": "stable", "refId": "A" },
-            { "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"canary\"}[1m])) / sum(rate(http_requests_total{version=\"canary\"}[1m]))", "legendFormat": "canary", "refId": "B" },
-            { "expr": "sum(rate(http_requests_total{status_code=~\"5..\",version=\"stable\"}[1m])) / sum(rate(http_requests_total{version=\"stable\"}[1m])) + 0.05", "legendFormat": "rollback threshold", "refId": "C" }
-          ]
-        },
-        {
-          "id": 3, "type": "timeseries",
-          "title": "P95 Latency by Version",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "fieldConfig": { "defaults": { "unit": "s" } },
-          "targets": [
-            { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version=\"stable\"}[1m])) by (le))", "legendFormat": "stable p95", "refId": "A" },
-            { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version=\"canary\"}[1m])) by (le))", "legendFormat": "canary p95", "refId": "B" }
-          ]
-        },
-        {
-          "id": 4, "type": "timeseries",
-          "title": "Canary Traffic Weight (%)",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
-          "targets": [
-            { "expr": "statgate_canary_weight{rollout=\"demo-rollout\"}", "legendFormat": "canary weight %", "refId": "A" }
-          ]
-        }
-      ]
-    }
 ---
 apiVersion: apps/v1
 kind: Deployment

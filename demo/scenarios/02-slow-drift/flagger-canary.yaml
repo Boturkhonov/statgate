@@ -1,0 +1,37 @@
+---
+# Flagger Canary для сценария 02-slow-drift.
+# Canary медленно деградирует с 1% до 6% за 5 минут. В каждом 60-секундном
+# окне Flagger увидит локально невысокий error rate (1-5%), все iterations passes.
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: demo
+  namespace: statgate-demo
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo
+  ingress:
+    name: demo-vs
+  service:
+    port: 8080
+    targetPort: 8080
+    gateways:
+      - demo-gateway.statgate-demo.svc.cluster.local
+    hosts:
+      - demo.statgate.local
+  analysis:
+    stepWeight: 20
+    maxWeight: 50
+    interval: 60s
+    threshold: 2
+    maxDuration: 10m
+    metrics:
+      - name: error-rate
+        templateRef:
+          name: error-rate
+          namespace: flagger-system
+        thresholdRange:
+          max: 5
+        interval: 1m

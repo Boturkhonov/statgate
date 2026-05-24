@@ -1,0 +1,35 @@
+apiVersion: statgate.io/v1alpha1
+kind: CanaryRollout
+metadata:
+  name: demo-rollout
+  namespace: statgate-demo
+spec:
+  targetRef: demo-canary
+  stableServiceRef: demo-stable
+  canaryServiceRef: demo-canary
+  virtualServiceRef: demo-vs
+  prometheusURL: "http://prometheus-server.monitoring.svc.cluster.local:9090"
+  analysis:
+    alpha: 0.05
+    beta: 0.05
+    analysisIntervalSeconds: 10
+    metrics:
+      - name: error-rate
+        canaryTotalQuery: 'sum(http_requests_total{version="canary", path!="/healthz", path!="/metrics"})'
+        canaryFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="canary", path!="/healthz", path!="/metrics"}) or vector(0)'
+        stableTotalQuery: 'sum(http_requests_total{version="stable", path!="/healthz", path!="/metrics"})'
+        stableFailureQuery: 'sum(http_requests_total{status_code=~"5..",version="stable", path!="/healthz", path!="/metrics"}) or vector(0)'
+        # baseline ~1%, ожидаемый максимум на финале ~6%.
+        # delta=0.02 — обнаружить уплыв на 2 п.п. от baseline.
+        delta: 0.02
+  steps:
+    - weight: 5
+      pauseSeconds: 60
+    - weight: 25
+      pauseSeconds: 60
+    - weight: 50
+      pauseSeconds: 60
+    - weight: 100
+      pauseSeconds: 0
+  paused: false
+  abort: false

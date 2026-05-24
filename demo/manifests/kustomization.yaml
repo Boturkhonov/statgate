@@ -1,0 +1,38 @@
+# Kustomize entry point for the StatGate demo namespace.
+#
+# Apply everything with:
+#   kubectl apply -k demo/manifests/
+#
+# The Grafana dashboard ConfigMap (grafana-dashboard-statgate) is generated
+# from grafana-dashboard.json so that JSON remains the single source of truth —
+# edit the file, re-apply with `-k`, done. (Kustomize requires file sources
+# to live inside the kustomization root, hence the file is under manifests/.)
+#
+# CanaryRollout is NOT applied here — it is applied per scenario from
+# demo/scenarios/<scenario>/ via apply.sh.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - 01-deployments.yaml
+  - 02-services.yaml
+  - 03-gateway.yaml
+  - 04-virtualservice.yaml
+  - 06-postgres.yaml
+  - 07-prometheus.yaml
+  - 08-grafana.yaml
+
+configMapGenerator:
+  - name: grafana-dashboard-statgate
+    namespace: statgate-demo
+    options:
+      labels:
+        app: grafana
+      # Hash suffix would force a new ConfigMap name on every dashboard edit,
+      # breaking the volume reference in 08-grafana.yaml. Disable it so the
+      # name stays stable and Grafana picks up updates via configMap watch.
+      disableNameSuffixHash: true
+    files:
+      - statgate.json=grafana-dashboard.json

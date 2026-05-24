@@ -94,7 +94,7 @@ Watch-only flags:
   --interval <seconds>    Refresh cadence (default 2)
 
 Examples:
-  statctl apply -f demo/manifests/05-rollout.yaml
+  statctl apply -f demo/manifests/optional/05-rollout.yaml
   statctl list -n statgate-demo
   statctl watch demo-rollout -n statgate-demo
   statctl pause demo-rollout -n statgate-demo

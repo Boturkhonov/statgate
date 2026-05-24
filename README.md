@@ -131,9 +131,11 @@ kubectl get pods -n statgate-system
 ### 4. Развёртывание демо-приложения
 
 ```bash
-# Применить все демо-манифесты (namespace, deployments, services, gateway,
-# virtualservice, rollout, postgres, prometheus, grafana)
-kubectl apply -f demo/manifests/
+# Применить базовые демо-манифесты через kustomize. CanaryRollout сюда НЕ входит —
+# он применяется отдельно ниже либо через сценарии из demo/scenarios/.
+# Флаг -k (вместо -f) включает kustomize: он подхватывает kustomization.yaml,
+# который генерирует ConfigMap дашборда Grafana из demo/manifests/grafana-dashboard.json.
+kubectl apply -k demo/manifests/
 
 # Дождаться готовности подов (≈ 60 с)
 kubectl wait --for=condition=Ready pod \
@@ -157,7 +159,16 @@ export PATH="$PATH:$(pwd)/bin"
 
 ### 6. Запуск канареечного развёртывания
 
-Демо-манифест `05-rollout.yaml` уже применён на предыдущем шаге.
+Базовый учебный rollout:
+```bash
+kubectl apply -f demo/manifests/optional/05-rollout.yaml
+```
+
+Либо запустить один из сценариев сравнения с Flagger (рекомендуется):
+```bash
+cd demo/scenarios/01-borderline && ./apply.sh statgate
+```
+
 Контроллер начнёт первый шаг автоматически.
 
 ```bash
@@ -237,7 +248,7 @@ statctl resume demo-rollout -n statgate-demo
 statctl abort demo-rollout -n statgate-demo
 
 # Применить изменённый манифест
-statctl apply -f demo/manifests/05-rollout.yaml
+statctl apply -f demo/manifests/optional/05-rollout.yaml
 
 # Удалить
 statctl delete demo-rollout -n statgate-demo

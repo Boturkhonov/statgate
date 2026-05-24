@@ -74,12 +74,12 @@ undeploy: ## Remove controller from cluster
 	helm uninstall statgate
 
 .PHONY: demo
-demo: ## Apply demo manifests
-	kubectl apply -f demo/manifests/
+demo: ## Apply demo manifests (via kustomize — generates Grafana dashboard ConfigMap from demo/manifests/grafana-dashboard.json)
+	kubectl apply -k demo/manifests/
 
 .PHONY: demo-clean
 demo-clean: ## Remove demo resources
-	kubectl delete -f demo/manifests/ --ignore-not-found
+	kubectl delete -k demo/manifests/ --ignore-not-found
 
 .PHONY: demo-loadtest
 demo-loadtest: ## Run k6 load test against the demo (requires k6 installed)

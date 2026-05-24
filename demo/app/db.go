@@ -60,6 +60,10 @@ func (db *DB) initSchema() error {
 			status     TEXT        NOT NULL DEFAULT 'pending',
 			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
+		-- Индекс под ORDER BY created_at DESC LIMIT N (паттерн "первая страница"
+		-- доминирует в нагрузочном тесте). Без него планировщик делает Seq Scan
+		-- + Sort, что даёт O(N log N) и рост latency со временем.
+		CREATE INDEX IF NOT EXISTS idx_orders_created_at_desc ON orders (created_at DESC);
 	`)
 	return err
 }
@@ -79,10 +83,15 @@ func (db *DB) CreateOrder(title string) (*Order, error) {
 	return &o, nil
 }
 
-// ListOrders returns all orders ordered by creation time descending.
-func (db *DB) ListOrders() ([]Order, error) {
+// ListOrders returns a page of orders ordered by creation time descending.
+// limit must be in (0, listOrdersMaxLimit]; offset must be ≥ 0. Use ListOrdersParams
+// for callers that need defaulting from query params.
+func (db *DB) ListOrders(limit, offset int) ([]Order, error) {
 	rows, err := db.conn.Query(
-		`SELECT id, title, status, created_at FROM orders ORDER BY created_at DESC`,
+		`SELECT id, title, status, created_at FROM orders
+		 ORDER BY created_at DESC
+		 LIMIT $1 OFFSET $2`,
+		limit, offset,
 	)
 	if err != nil {
 		dbOperationsTotal.WithLabelValues("list", "error").Inc()
@@ -90,7 +99,7 @@ func (db *DB) ListOrders() ([]Order, error) {
 	}
 	defer rows.Close()
 
-	var orders []Order
+	orders := make([]Order, 0, limit)
 	for rows.Next() {
 		var o Order
 		if err := rows.Scan(&o.ID, &o.Title, &o.Status, &o.CreatedAt); err != nil {

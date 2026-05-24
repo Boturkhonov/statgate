@@ -4,20 +4,26 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
+)
+
+const (
+	listOrdersDefaultLimit = 50
+	listOrdersMaxLimit     = 200
 )
 
 // App holds shared dependencies for all HTTP handlers.
 type App struct {
-	db        *DB
-	version   string
-	hostname  string
-	errorRate float64 // fraction 0.0–1.0; non-zero on v2 to simulate failures
+	db       *DB
+	version  string
+	hostname string
+	injector *errorInjector
 }
 
 func (a *App) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	// Chaos injection for v2: simulate errors/latency at the configured rate.
-	if a.errorRate > 0 && rand.Float64() < a.errorRate {
+	if rate := a.injector.currentRate(time.Now()); rate > 0 && rand.Float64() < rate {
 		time.Sleep(time.Duration(200+rand.Intn(800)) * time.Millisecond)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "simulated failure"})
 		return
@@ -45,21 +51,54 @@ func (a *App) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleListOrders(w http.ResponseWriter, r *http.Request) {
+	limit, offset, err := parseListPagination(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
 	if a.db == nil {
 		writeJSON(w, http.StatusOK, []Order{})
 		return
 	}
 
-	orders, err := a.db.ListOrders()
+	orders, err := a.db.ListOrders(limit, offset)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	if orders == nil {
-		orders = []Order{}
-	}
 	writeJSON(w, http.StatusOK, orders)
 }
+
+// parseListPagination extracts limit/offset from query params, applying
+// defaults and clamping limit to listOrdersMaxLimit. Returns a 400-friendly
+// error message for non-integer or negative values.
+func parseListPagination(r *http.Request) (limit, offset int, err error) {
+	limit = listOrdersDefaultLimit
+	if v := r.URL.Query().Get("limit"); v != "" {
+		n, e := strconv.Atoi(v)
+		if e != nil || n <= 0 {
+			return 0, 0, errInvalidParam("limit must be a positive integer")
+		}
+		if n > listOrdersMaxLimit {
+			n = listOrdersMaxLimit
+		}
+		limit = n
+	}
+
+	if v := r.URL.Query().Get("offset"); v != "" {
+		n, e := strconv.Atoi(v)
+		if e != nil || n < 0 {
+			return 0, 0, errInvalidParam("offset must be a non-negative integer")
+		}
+		offset = n
+	}
+	return limit, offset, nil
+}
+
+type errInvalidParam string
+
+func (e errInvalidParam) Error() string { return string(e) }
 
 func (a *App) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
