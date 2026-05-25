@@ -152,6 +152,7 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if rollout.Spec.PrometheusURL != "" && rollout.Spec.Analysis != nil {
 		decision, newState, reason, err := RunSPRT(
 			ctx, rollout.Spec.PrometheusURL,
+			rollout.Namespace, rollout.Name,
 			rollout.Spec.Analysis,
 			rollout.Status.AnalysisState,
 		)
@@ -225,7 +226,12 @@ func (r *CanaryRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// --- Advance to next step ---
-	// Reset SPRT state for the next step.
+	// Reset SPRT state for the next step (both CR-status and exported metrics).
+	if rollout.Spec.Analysis != nil {
+		for _, m := range rollout.Spec.Analysis.Metrics {
+			resetSPRTMetricSeries(rollout.Namespace, rollout.Name, m.Name)
+		}
+	}
 	rollout.Status.AnalysisState = nil
 
 	nextStep := int32(currentStep + 1)
@@ -251,6 +257,8 @@ func (r *CanaryRolloutReconciler) setStatus(
 	rollout.Status.CurrentWeight = weight
 	rollout.Status.LastTransitionTime = metav1.Now()
 	rollout.Status.Message = message
+	recordRolloutPhase(rollout.Namespace, rollout.Name, phase)
+	recordCanaryWeight(rollout.Namespace, rollout.Name, weight)
 	return r.Status().Update(ctx, rollout)
 }
 

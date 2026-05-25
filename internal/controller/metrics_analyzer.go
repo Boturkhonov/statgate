@@ -34,9 +34,12 @@ const (
 //   - Otherwise                             → SPRTContinue (keep observing)
 //
 // The caller must persist the returned updatedState in the CR status.
+// Identifiers (namespace, rolloutName) are used to publish Prometheus
+// observability metrics — they do not affect the decision logic.
 func RunSPRT(
 	ctx context.Context,
 	prometheusURL string,
+	namespace, rolloutName string,
 	analysis *statgatev1alpha1.SPRTAnalysis,
 	currentState []statgatev1alpha1.SPRTMetricState,
 ) (decision SPRTDecision, updatedState []statgatev1alpha1.SPRTMetricState, reason string, err error) {
@@ -51,6 +54,7 @@ func RunSPRT(
 	//   Lower bound B: accept H0 (canary is fine)  → promote
 	upperBound := math.Log((1 - analysis.Beta) / analysis.Alpha)
 	lowerBound := math.Log(analysis.Beta / (1 - analysis.Alpha))
+	recordSPRTBoundaries(namespace, rolloutName, upperBound, lowerBound)
 
 	// Build a working copy of the state slice.
 	updatedState = make([]statgatev1alpha1.SPRTMetricState, 0, len(analysis.Metrics))
@@ -137,6 +141,7 @@ func RunSPRT(
 		// Check SPRT boundaries.
 		if state.LogLikelihood >= upperBound {
 			state.Decision = "rollback"
+			recordSPRTMetricState(namespace, rolloutName, state)
 			updatedState = append(updatedState, state)
 			return SPRTRollback, updatedState, fmt.Sprintf(
 				"metric %q: evidence of degradation (Λ=%.4f ≥ A=%.4f, p0=%.4f, observed=%d, failures=%d)",
@@ -147,6 +152,7 @@ func RunSPRT(
 			state.Decision = "promote"
 		}
 
+		recordSPRTMetricState(namespace, rolloutName, state)
 		updatedState = append(updatedState, state)
 	}
 

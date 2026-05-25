@@ -154,7 +154,7 @@ func TestRunSPRT_Promote(t *testing.T) {
 		"st": 1000, "sf": 10,
 	}))
 
-	decision, state, reason, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	decision, state, reason, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestRunSPRT_Rollback(t *testing.T) {
 		"st": 1000, "sf": 10,
 	}))
 
-	decision, state, reason, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	decision, state, reason, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestRunSPRT_Continue(t *testing.T) {
 		"st": 1000, "sf": 10,
 	}))
 
-	decision, state, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	decision, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestRunSPRT_NoCanaryData(t *testing.T) {
 		return 1000, true
 	})
 
-	decision, state, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	decision, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -277,7 +277,7 @@ func TestRunSPRT_StableHasNoTraffic(t *testing.T) {
 		"st": 0, "sf": 0,
 	}))
 
-	decision, state, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	decision, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -310,7 +310,7 @@ func TestRunSPRT_CounterReset(t *testing.T) {
 		"st": 1000, "sf": 10,
 	}))
 
-	decision, state, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), initial)
+	decision, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), initial)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -340,7 +340,7 @@ func TestRunSPRT_TerminalDecisionPreserved(t *testing.T) {
 		"ct": 1, "cf": 0, "st": 1, "sf": 0,
 	}))
 
-	_, state, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), initial)
+	_, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), initial)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestRunSPRT_MultiMetricAllRequiredForPromote(t *testing.T) {
 		"sct": 10, "scf": 0, "sst": 1000, "ssf": 10,
 	}))
 
-	decision, state, _, err := RunSPRT(context.Background(), srv.URL, analysis, nil)
+	decision, state, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", analysis, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -425,7 +425,7 @@ func TestRunSPRT_MultiMetricAnyRollback(t *testing.T) {
 		"b_ct": 1000, "b_cf": 200, "b_st": 1000, "b_sf": 10,
 	}))
 
-	decision, _, reason, err := RunSPRT(context.Background(), srv.URL, analysis, nil)
+	decision, _, reason, err := RunSPRT(context.Background(), srv.URL, "default", "test", analysis, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestRunSPRT_PrometheusError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, _, err := RunSPRT(context.Background(), srv.URL, singleMetricAnalysis(), nil)
+	_, _, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", singleMetricAnalysis(), nil)
 	if err == nil {
 		t.Errorf("expected error when Prometheus returns 500")
 	}
@@ -463,7 +463,7 @@ func TestRunSPRT_DefaultIntervalDoesNotCrash(t *testing.T) {
 		"ct": 10, "cf": 0,
 		"st": 1000, "sf": 10,
 	}))
-	if _, _, _, err := RunSPRT(context.Background(), srv.URL, a, nil); err != nil {
+	if _, _, _, err := RunSPRT(context.Background(), srv.URL, "default", "test", a, nil); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }

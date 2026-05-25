@@ -383,6 +383,69 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 13,
+      "title": "По роли (deployment)",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 50 },
+      "collapsed": false
+    },
+    {
+      "id": 14,
+      "title": "Request Rate by Role",
+      "description": "Разбивка трафика по логической роли pod'а (извлечена regex'ом из pod name). Работает в обоих режимах: StatGate показывает demo-stable / demo-canary, Flagger показывает demo / demo-primary. Полезно для отслеживания распределения трафика между primary и canary в Flagger-режиме, где env-var APP_VERSION перестаёт быть надёжным разделителем после Promotion.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 51 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "reqps"
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (role) (label_replace(rate(http_requests_total{namespace=\"statgate-demo\", path!=\"/healthz\", path!=\"/metrics\"}[1m]), \"role\", \"$1\", \"pod\", \"^(demo(?:-stable|-canary|-primary)?)-[a-z0-9]+-[a-z0-9]+$\"))",
+          "legendFormat": "{{role}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Error Rate by Role",
+      "description": "Доля 5xx по логической роли pod'а. В Flagger-режиме после Promotion линия demo и demo-primary могут совпасть — это нормально, означает, что Flagger скопировал canary-template в primary. Расхождение видно во время самого rollout.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 51 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (role) (label_replace(rate(http_requests_total{status_code=~\"5..\", namespace=\"statgate-demo\", path!=\"/healthz\", path!=\"/metrics\"}[1m]), \"role\", \"$1\", \"pod\", \"^(demo(?:-stable|-canary|-primary)?)-[a-z0-9]+-[a-z0-9]+$\")) / sum by (role) (label_replace(rate(http_requests_total{namespace=\"statgate-demo\", path!=\"/healthz\", path!=\"/metrics\"}[1m]), \"role\", \"$1\", \"pod\", \"^(demo(?:-stable|-canary|-primary)?)-[a-z0-9]+-[a-z0-9]+$\"))",
+          "legendFormat": "{{role}}",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "10s",

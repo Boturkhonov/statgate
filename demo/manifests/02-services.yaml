@@ -8,7 +8,11 @@ spec:
     app: demo
     version: stable
   ports:
-    - port: 80
+    # Istio admission webhook требует name у портов в namespace с включённым
+    # sidecar injection — иначе apply падает с "spec.ports[0].name: Required value".
+    # Префикс http- подсказывает Istio про HTTP-протокол (alternative: protocol: HTTP в Istio Service).
+    - name: http
+      port: 80
       targetPort: 8080
       protocol: TCP
 ---
@@ -22,6 +26,7 @@ spec:
     app: demo
     version: canary
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 8080
       protocol: TCP

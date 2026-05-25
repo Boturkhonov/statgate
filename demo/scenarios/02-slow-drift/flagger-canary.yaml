@@ -8,12 +8,11 @@ metadata:
   name: demo
   namespace: statgate-demo
 spec:
+  provider: istio
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: demo
-  ingress:
-    name: demo-vs
   service:
     port: 8080
     targetPort: 8080
@@ -26,12 +25,14 @@ spec:
     maxWeight: 50
     interval: 60s
     threshold: 2
-    maxDuration: 10m
     metrics:
       - name: error-rate
-        templateRef:
-          name: error-rate
-          namespace: flagger-system
+        query: |
+          100 * (
+            sum(rate(http_requests_total{status_code=~"5..", version="canary", namespace="statgate-demo"}[30s]))
+            /
+            sum(rate(http_requests_total{version="canary", namespace="statgate-demo"}[30s]))
+          )
         thresholdRange:
           max: 5
-        interval: 1m
+        interval: 60s

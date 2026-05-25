@@ -4,11 +4,12 @@
 
 | #  | Сценарий                                        | Свойство SPRT                                    | Ожидаемый исход                     |
 |----|-------------------------------------------------|--------------------------------------------------|-------------------------------------|
+| 00 | [Baseline (happy path)](00-baseline/README.md)  | Корректное поведение в норме (α-гарантия)        | StatGate Promoted, Flagger Succeeded |
 | 01 | [Borderline](01-borderline/README.md)           | False-negative resistance                        | StatGate Aborted, Flagger Succeeded |
 | 02 | [Slow drift](02-slow-drift/README.md)           | Adaptive detection / accumulation                | StatGate Aborted, Flagger Succeeded |
 | 03 | [Transient spike](03-transient-spike/README.md) | False-positive resistance (границы применимости) | Зависит от параметров — см. README  |
 
-Главный кейс для презентации — **01-borderline**: на одних и тех же данных два инструмента дают **противоположные** решения, что напрямую иллюстрирует фундаментальную разницу подходов.
+Порядок презентации: сначала **00-baseline** (подтверждение корректности — оба инструмента promote здоровый релиз), затем **01-borderline** (главный кейс — на тех же данных противоположные решения), потом 02-slow-drift и 03-transient-spike.
 
 ## Общая схема прогона
 
@@ -86,6 +87,31 @@ kubectl describe canary demo -n statgate-demo
 k6 run --env BASE_URL=http://$INGRESS_IP ../../loadtest/load-test.js
 ./apply.sh reset
 ```
+
+> **Важно про топологию.** StatGate и Flagger используют принципиально разные
+> топологии:
+>
+> - **StatGate** работает с двумя готовыми Deployment'ами (`demo-stable` +
+>   `demo-canary`) и сам управляет весами в `demo-vs`.
+> - **Flagger** ожидает ОДИН Deployment (`demo`), который сам клонирует в
+>   `demo-primary`/`demo-canary` и создаёт собственный VirtualService с
+>   именем `demo`.
+>
+> Поэтому `./apply.sh flagger` **временно демонтирует** StatGate-инфру
+> (удаляет `demo-stable/demo-canary/demo-vs`), создаёт единый Deployment
+> `demo` со стабильными env'ами, применяет Flagger Canary CR, дожидается
+> создания `demo-primary`, и затем триггерит canary deploy через
+> `kubectl set env deployment/demo …`.
+>
+> `./apply.sh reset` **восстанавливает StatGate-инфру** обратно через
+> `kubectl apply -k demo/manifests/`. После Flagger-прогона обязательно
+> сделай reset перед следующим запуском StatGate-режима, иначе сценарий
+> упадёт ("deployment demo-stable not found").
+>
+> Grafana-дашборд продолжает работать одинаково в обоих режимах: метрики
+> `http_requests_total{version=...}` разделяются по env-var `APP_VERSION`
+> приложения (а не по физическому имени Deployment), поэтому панели 1-3,
+> 9-12 показывают `stable` vs `canary` корректно в любом случае.
 
 ### 3. Между прогонами — сброс Prometheus (опционально)
 

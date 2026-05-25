@@ -1,8 +1,7 @@
 ---
-# Flagger Canary для сценария 03-transient-spike.
-# Canary полностью здоровый (1% ошибок, как stable), но имеет один 15-сек всплеск
-# с ~40% ошибок в середине rollout. Flagger в окне со всплеском увидит error rate
-# > 5% и откатит здоровую версию.
+# Flagger Canary для сценария 00-baseline (happy path).
+# Canary работает без ошибок (0%), stable тоже. Ожидаем что Flagger увидит
+# error rate 0% < 5% во всех окнах и спокойно promote canary.
 apiVersion: flagger.app/v1beta1
 kind: Canary
 metadata:

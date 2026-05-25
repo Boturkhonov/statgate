@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Сценарий 02-slow-drift: canary деградирует постепенно с 1% до 6% за 5 минут.
-# Flagger в каждом отдельном окне видит низкий error rate и пропускает.
-# StatGate накапливает Λ и откатывает.
+# Сценарий 00-baseline: canary работает корректно (0% ошибок, как stable).
+# Это happy-path для слайда — показывает, что оба инструмента в нормальной
+# ситуации спокойно promote новую версию. Демонстрирует, что StatGate не
+# ложно-положителен и не блокирует здоровые релизы.
 
 set -euo pipefail
 
@@ -11,18 +12,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../_flagger.sh"
 
 statgate_setup_env() {
-    # Stable: 1% — стабильный baseline.
+    # Stable: 0% ошибок — чистый baseline.
     kubectl -n "$NS" set env deployment/demo-stable \
-        ERROR_RATE_START=0.01 ERROR_RATE_END=0.01 \
+        ERROR_RATE_START=0 ERROR_RATE_END=0 \
         ERROR_RATE_RAMP_SECONDS- ERROR_SPIKE_AT_SECONDS- \
         ERROR_SPIKE_DURATION_SECONDS- ERROR_SPIKE_RATE- ERROR_RATE-
 
-    # Canary: линейный рост с 1% до 6% за 300 секунд.
+    # Canary: 0% ошибок — здоровая новая версия.
     kubectl -n "$NS" set env deployment/demo-canary \
-        ERROR_RATE_START=0.01 ERROR_RATE_END=0.06 \
-        ERROR_RATE_RAMP_SECONDS=300 \
-        ERROR_SPIKE_AT_SECONDS- ERROR_SPIKE_DURATION_SECONDS- \
-        ERROR_SPIKE_RATE- ERROR_RATE-
+        ERROR_RATE_START=0 ERROR_RATE_END=0 \
+        ERROR_RATE_RAMP_SECONDS- ERROR_SPIKE_AT_SECONDS- \
+        ERROR_SPIKE_DURATION_SECONDS- ERROR_SPIKE_RATE- ERROR_RATE-
 
     kubectl -n "$NS" rollout status deployment/demo-stable --timeout=120s
     kubectl -n "$NS" rollout status deployment/demo-canary --timeout=120s
@@ -33,16 +33,21 @@ case "${1:-}" in
         statgate_setup_env
         kubectl apply -f "$SCRIPT_DIR/statgate-rollout.yaml"
         echo "Готово. Запусти: ./bin/statctl watch demo-rollout -n $NS"
-        echo "ВАЖНО: ramp начинается с момента старта canary pod (не с rollout)."
+        echo "Ожидается: rollout пройдёт все шаги, финальная фаза Promoted."
         ;;
     flagger)
         flagger_create_topology
         flagger_apply_canary "$SCRIPT_DIR"
+        # Для baseline canary деплоится с теми же 0%, что и primary, —
+        # триггер всё равно нужен, чтобы Flagger зафиксировал "новую версию"
+        # и запустил анализ. APP_VERSION=canary создаёт separate label
+        # в Prometheus, без него все запросы идут в version=stable и query
+        # делителя обнуляет результат.
         flagger_trigger_canary \
-            ERROR_RATE_START=0.01 ERROR_RATE_END=0.06 \
-            ERROR_RATE_RAMP_SECONDS=300 \
-            ERROR_SPIKE_AT_SECONDS- ERROR_SPIKE_DURATION_SECONDS- ERROR_SPIKE_RATE-
-        echo "Готово. ramp 1% → 6% стартует с момента запуска новых canary-pod'ов."
+            ERROR_RATE_START=0 ERROR_RATE_END=0 \
+            ERROR_RATE_RAMP_SECONDS- ERROR_SPIKE_AT_SECONDS- \
+            ERROR_SPIKE_DURATION_SECONDS- ERROR_SPIKE_RATE-
+        echo "Готово. Ожидается: Flagger проходит шаги 20→40→60 и Promotion completed."
         ;;
     reset)
         kubectl -n "$NS" delete canaryrollout demo-rollout --ignore-not-found

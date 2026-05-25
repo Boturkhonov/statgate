@@ -48,12 +48,15 @@ data:
       evaluation_interval: 15s
 
     scrape_configs:
-      # Scrape pods annotated with prometheus.io/scrape: "true"
+      # Scrape pods annotated with prometheus.io/scrape: "true".
+      # statgate-system добавлен в список namespaces — там живёт контроллер
+      # statgate-controller-manager, экспортирующий метрики statgate_* (SPRT Λ,
+      # canary_weight, rollout_phase) на порту 8080 для Grafana-дашборда.
       - job_name: kubernetes-pods
         kubernetes_sd_configs:
           - role: pod
             namespaces:
-              names: [statgate-demo]
+              names: [statgate-demo, statgate-system]
         relabel_configs:
           # Keep only pods with scrape annotation
           - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]

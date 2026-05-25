@@ -8,12 +8,11 @@ metadata:
   name: demo
   namespace: statgate-demo
 spec:
+  provider: istio
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: demo
-  ingress:
-    name: demo-vs
   service:
     port: 8080
     targetPort: 8080
@@ -26,15 +25,22 @@ spec:
     maxWeight: 50
     interval: 60s
     threshold: 2
-    maxDuration: 10m
     metrics:
       - name: error-rate
-        templateRef:
-          name: error-rate
-          namespace: flagger-system
+        # Inline PromQL под наши application-метрики (http_requests_total).
+        # Встроенный Flagger templateRef "error-rate" работает с istio_request_total
+        # из envoy sidecar, у нас scrape идёт по аннотациям пода и метрики
+        # разделяются по env-var version (stable/canary). Поэтому фильтруем
+        # по version="canary" — это эквивалентно "только canary-side error rate".
+        query: |
+          100 * (
+            sum(rate(http_requests_total{status_code=~"5..", version="canary", namespace="statgate-demo"}[30s]))
+            /
+            sum(rate(http_requests_total{version="canary", namespace="statgate-demo"}[30s]))
+          )
         # Стандартный порог 5% — заведомо выше реальной деградации canary (4.5%).
         # Это и есть точка демонстрации: Flagger не реагирует на статистически
         # значимое, но численно "невидимое" ухудшение.
         thresholdRange:
           max: 5
-        interval: 1m
+        interval: 60s

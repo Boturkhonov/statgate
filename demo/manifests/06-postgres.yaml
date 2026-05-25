@@ -73,5 +73,8 @@ spec:
   selector:
     app: postgres
   ports:
-    - port: 5432
+    # Istio admission webhook требует name у портов.
+    # Префикс tcp- подсказывает Istio про TCP-протокол (без L7 разбора).
+    - name: tcp-postgres
+      port: 5432
       targetPort: 5432
